@@ -9,7 +9,7 @@ BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 BUDGET_WEIGHT = 1000
 RUNTIME_WEIGHT = 1000
 
-NUM_CANDIDATES = 20 #The number of candidates to keep track of
+NUM_CANDIDATES = 20  # The number of candidates to keep track of
 
 def runAlgorithm():
 
@@ -18,13 +18,12 @@ def runAlgorithm():
 
     topCandidates = []
 
-
     for i in range(NUM_CANDIDATES):
         topCandidates.append((0, None))
 
     print(len(topCandidates))
 
-    for index, row in dataSetDF.iterrows(): #Iterate all rows in our data-set
+    for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
 
         currentDist = calculateDistance(dfToPredict, row)
 
@@ -35,11 +34,13 @@ def runAlgorithm():
     for i in range(NUM_CANDIDATES):
         print("\nCandidate " + str(i + 1) + " Points: " + str(topCandidates[i][0]) + "   \n" + str(topCandidates[i][1]))
 
-    #Make the prediction based on the top candidates found
+    # Make the prediction based on the top candidates found
     makePrediction(topCandidates)
+
 
 def makePrediction(candidateList):
     None
+
 
 def calculateDistance(toPredict, toCompare):
 
@@ -49,9 +50,25 @@ def calculateDistance(toPredict, toCompare):
     budgetDist = compareBudget(toPredict['budget'], toCompare['budget'])
 
     totalDist += runtimeDist * RUNTIME_WEIGHT
-    totalDist += budgetDist  * BUDGET_WEIGHT
+    totalDist += budgetDist * BUDGET_WEIGHT
 
     return totalDist
+
+
+def compareGenres(toPredictGenresString, toCompareGenresString):
+    toPredictGenres = toPredictGenresString.split("|")
+    toCompareGenres = toCompareGenresString.split("|")
+
+    toCompareGenresSet = set(toCompareGenres)
+
+    commmonCount = 0
+
+    for genre in toPredictGenres:
+        if genre in toCompareGenresSet:
+            commmonCount += 1
+
+    return 100 * commmonCount/len(toPredictGenres)
+
 
 def compareRuntime(toPredictRuntime, toCompareRuntime):
     diff = abs(int(toPredictRuntime) - int(toCompareRuntime))
@@ -94,3 +111,9 @@ def compareBudget(toPredictBudget, toCompareBudget):
 
 
 runAlgorithm()
+
+# Test compareGenres()
+# toPredict = "Science Fiction|Fantasy|Action|Adventure|Drama|Horror"
+# toCompare = "Action|Adventure|Fantasy|Science Fiction"
+# result = compareGenres(toPredict, toCompare)
+# print("**** " + str(result))
