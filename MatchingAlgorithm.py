@@ -61,7 +61,7 @@ def calculateDistance(toPredict, toCompare):
     directorDist = compareDirector(toPredict['director'], toCompare['director'])
     genreDist = compareGenres(toPredict['genres'], toCompare['genres'])
     actorDist = compareActors(toPredict['cast'], toCompare['cast'])
-    companyDist = compareComapnies(toPredict['production_companies'], toCompare['production_companies'])
+    companyDist = compareCompanies(toPredict['production_companies'], toCompare['production_companies'])
 
     totalDist += runtimeDist * RUNTIME_WEIGHT
     totalDist += budgetDist * BUDGET_WEIGHT
@@ -165,7 +165,7 @@ def compareActors(toPredictActors, toCompareActors):
 
     return distance
 
-def compareComapnies(toPredictCompanies, toCompareCompanies):
+def compareCompanies(toPredictCompanies, toCompareCompanies):
     toPredictCompanies = str(toPredictCompanies).split("|")
     toCompareCompanies = str(toCompareCompanies).split("|")
 
