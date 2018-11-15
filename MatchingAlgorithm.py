@@ -6,7 +6,7 @@ RUNTIME_DIST = {"1": 100, "2": 92.1, "3": 82.7, "4": 71.2, "5": 56.5, "6": 35.6,
 # Distribution of points for the budget comparison
 BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 
-DIRECTOR_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
+DIRECTOR_DIST = {"1": 100, "2": 0}
 
 ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6": 0}
 
@@ -199,39 +199,12 @@ def compareCompanies(toPredictCompanies, toCompareCompanies):
 
     return distance
 
-
 def compareDirector(toPredictDirector, toCompareDirector):
-    points = -1
 
-    #if match,but without points = 0; no match points = -1,
     if str(toPredictDirector) in str(toCompareDirector):
-        for multiDirectors in str(toCompareDirector).split("|"):
-             if str(toPredictDirector) in multiDirectors:
-                 if "points" in multiDirectors:
-                     pointsIndexStart = multiDirectors.find(":")
-                     pointsIndexEnd = multiDirectors.find("points")
-                     points = int(multiDirectors[pointsIndexStart + 1:pointsIndexEnd - 1])
-                 else:
-                     points = 0
-
-    if points > 50000:
         distance = DIRECTOR_DIST.get("1")
-    elif 20000 < points <= 50000:
-        distance = DIRECTOR_DIST.get("2")
-    elif 10000 < points <= 20000:
-        distance = DIRECTOR_DIST.get("3")
-    elif 5000 < points <= 10000:
-        distance = DIRECTOR_DIST.get("4")
-    elif 2000 < points <= 5000:
-        distance = DIRECTOR_DIST.get("5")
-    elif 1000 < points <= 2000:
-        distance = DIRECTOR_DIST.get("6")
-    elif 0 < points <= 1000:
-        distance = DIRECTOR_DIST.get("7")
-    elif points == 0:
-        distance = DIRECTOR_DIST.get("8")
     else:
-        distance = DIRECTOR_DIST.get("9")
+        distance = DIRECTOR_DIST.get("2")
 
     return distance
 
