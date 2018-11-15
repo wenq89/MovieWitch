@@ -6,7 +6,8 @@ RUNTIME_DIST = {"1": 100, "2": 92.1, "3": 82.7, "4": 71.2, "5": 56.5, "6": 35.6,
 # Distribution of points for the budget comparison
 BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 
-DIRECTOR_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
+#DIRECTOR_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
+DIRECTOR_DIST = {"1": 100, "2": 0}
 
 ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6": 0}
 
@@ -14,12 +15,12 @@ COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
 
 COMPANY_CLOSE_MATCH_REDUCTION = 0.5 #Reduce distance by 50%
 
-BUDGET_WEIGHT = 1000
+BUDGET_WEIGHT = 5000
 RUNTIME_WEIGHT = 1000
 DIRECTOR_WEIGHT = 1000
 GENRE_WEIGHT = 1000
-ACTOR_WEIGHT = 1000
-COMPANIES_WEIGHT = 1000
+ACTOR_WEIGHT = 5000
+COMPANIES_WEIGHT = 5000
 
 NUM_CANDIDATES = 20  # The number of candidates to keep track of
 
@@ -38,8 +39,6 @@ def runAlgorithm():
     for i in range(NUM_CANDIDATES):
         topCandidates.append((0, None))
 
-    print(len(topCandidates))
-
     for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
 
         currentDist = calculateDistance(dfToPredict, row)
@@ -56,19 +55,37 @@ def runAlgorithm():
 
 
 def makePrediction(candidateList):
-    None
+
+    revPrediction = 0
+    ratingPrediction = 0
+    numberOfRatings = 0
+    totalPoints = 0
+
+    for candidate in candidateList:
+
+
+        if int(candidate[1]['revenue']) > 0:
+            revPrediction += int(candidate[1]['revenue']) * int(candidate[0])
+            totalPoints += candidate[0]
+            ratingPrediction += float(candidate[1]['vote_average']) * float(candidate[1]['vote_count']) * float(candidate[0])
+            numberOfRatings += float(candidate[1]['vote_count']) * float(candidate[0])
+
+    print(str(revPrediction))
+    print(ratingPrediction)
+    print("\nRevenue Prediction: " + str(revPrediction / (NUM_CANDIDATES * totalPoints)))
+    print("\nRating Prediction: " + str(ratingPrediction / numberOfRatings ))
 
 
 def calculateDistance(toPredict, toCompare):
 
     totalDist = 0
 
-    runtimeDist = compareRuntime(toPredict['runtime'], toCompare['runtime'])
-    budgetDist = compareBudget(toPredict['budget'], toCompare['budget'])
-    directorDist = compareDirector(toPredict['director'], toCompare['director'])
-    genreDist = compareGenres(toPredict['genres'], toCompare['genres'])
-    actorDist = compareActors(toPredict['cast'], toCompare['cast'])
-    companyDist = compareCompanies(toPredict['production_companies'], toCompare['production_companies'])
+    runtimeDist = matchRuntime(toPredict['runtime'], toCompare['runtime'])
+    budgetDist = matchBudget(toPredict['budget'], toCompare['budget'])
+    directorDist = matchDirector(toPredict['director'], toCompare['director'])
+    genreDist = matchGenres(toPredict['genres'], toCompare['genres'])
+    actorDist = matchActors(toPredict['cast'], toCompare['cast'])
+    companyDist = matchCompanies(toPredict['production_companies'], toCompare['production_companies'])
 
     totalDist += runtimeDist * RUNTIME_WEIGHT
     totalDist += budgetDist * BUDGET_WEIGHT
@@ -80,7 +97,7 @@ def calculateDistance(toPredict, toCompare):
     return totalDist
 
 
-def compareGenres(toPredictGenresString, toCompareGenresString):
+def matchGenres(toPredictGenresString, toCompareGenresString):
     toPredictGenres = str(toPredictGenresString).split("|")
     toCompareGenres = str(toCompareGenresString).split("|")
 
@@ -95,7 +112,7 @@ def compareGenres(toPredictGenresString, toCompareGenresString):
     return 100 * commonCount/len(toPredictGenres)
 
 
-def compareRuntime(toPredictRuntime, toCompareRuntime):
+def matchRuntime(toPredictRuntime, toCompareRuntime):
     diff = abs(int(toPredictRuntime) - int(toCompareRuntime))
 
     if diff <= 5:
@@ -116,7 +133,7 @@ def compareRuntime(toPredictRuntime, toCompareRuntime):
     return distance
 
 
-def compareBudget(toPredictBudget, toCompareBudget):
+def matchBudget(toPredictBudget, toCompareBudget):
     diff = abs(int(toPredictBudget) - int(toCompareBudget)) / int(toPredictBudget) * 100
 
     if diff <= 5:
@@ -134,7 +151,7 @@ def compareBudget(toPredictBudget, toCompareBudget):
 
     return distance
 
-def compareActors(toPredictActors, toCompareActors):
+def matchActors(toPredictActors, toCompareActors):
     toPredictActors = str(toPredictActors).split("|")
     toCompareActors = str(toCompareActors).split("|")
 
@@ -155,8 +172,6 @@ def compareActors(toPredictActors, toCompareActors):
         if actor in toCompareActorsSet:
             commonCount += 1
 
-    distance = 0
-
     if commonCount >= 5:
         distance = ACTOR_DIST.get("1")
     elif commonCount == 4:
@@ -172,7 +187,7 @@ def compareActors(toPredictActors, toCompareActors):
 
     return distance
 
-def compareCompanies(toPredictCompanies, toCompareCompanies):
+def matchCompanies(toPredictCompanies, toCompareCompanies):
     toPredictCompanies = str(toPredictCompanies).split("|")
     toCompareCompanies = str(toCompareCompanies).split("|")
 
@@ -217,10 +232,35 @@ def compareCompanies(toPredictCompanies, toCompareCompanies):
     else:
         distance = COMPANIES_DIST.get("4")
 
+    if commonCount > 1:
+        print(distance)
+        print("\nCompanies: " + toCompareCompanies)
+
+    return distance
+
+def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDF):
+    toPredictCompanies = str(dfToPredict['production_companies']).split("|")
+
+    for company in toPredictCompanies:
+        companyMatches = dataSetDF.loc[dataSetDF['production_companies'] == company]
+
+        if (companyMatches.empty):
+            predictCompaniesCloseMatchBooleanList.append(True)
+        else:
+            predictCompaniesCloseMatchBooleanList.append(False)
+
+
+def matchDirector(toPredictDirector, toCompareDirector):
+
+    if str(toPredictDirector) in str(toCompareDirector):
+        distance = DIRECTOR_DIST.get("1")
+    else:
+        distance = DIRECTOR_DIST.get("2")
+
     return distance
 
 
-def compareDirector(toPredictDirector, toCompareDirector):
+def compareDirectorPoints(toPredictDirector, toCompareDirector):
     points = -1
 
     #if match,but without points = 0; no match points = -1,
@@ -254,17 +294,6 @@ def compareDirector(toPredictDirector, toCompareDirector):
         distance = DIRECTOR_DIST.get("9")
 
     return distance
-
-def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDF):
-    toPredictCompanies = str(dfToPredict['production_companies']).split("|")
-
-    for company in toPredictCompanies:
-        companyMatches = dataSetDF.loc[dataSetDF['production_companies'] == company]
-
-        if (companyMatches.empty):
-            predictCompaniesCloseMatchBooleanList.append(True)
-        else:
-            predictCompaniesCloseMatchBooleanList.append(False)
 
 runAlgorithm()
 
