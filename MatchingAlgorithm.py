@@ -12,6 +12,8 @@ ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6":
 
 COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
 
+COMPANY_CLOSE_MATCH_REDUCTION = 0.5 #Reduce distance by 50%
+
 BUDGET_WEIGHT = 1000
 RUNTIME_WEIGHT = 1000
 DIRECTOR_WEIGHT = 1000
@@ -21,10 +23,15 @@ COMPANIES_WEIGHT = 1000
 
 NUM_CANDIDATES = 20  # The number of candidates to keep track of
 
+#List of boolean, in same order as companies given, to see if close match is required
+predictCompaniesCloseMatchBooleanList = []
+
 def runAlgorithm():
 
     dataSetDF = pd.read_csv('tmbdWithPoints.csv', dtype='object')
     dfToPredict = pd.read_csv('toPredict.csv', dtype='object').iloc[0]
+
+    checkIfCompaniesCloseMatchesNeeded(dfToPredict, dataSetDF)
 
     topCandidates = []
 
@@ -180,11 +187,24 @@ def compareCompanies(toPredictCompanies, toCompareCompanies):
 
     toCompareCompaniesSet = set(toCompareCompaniesList)
 
-    commonCount = 0
+    commonCount = 0.0
 
-    for actor in toPredictCompaniesList:
-        if actor in toCompareCompaniesSet:
-            commonCount += 1
+    for company in toPredictCompaniesList:
+        companyIndex = toPredictCompaniesList.index(company)
+
+        if (predictCompaniesCloseMatchBooleanList[companyIndex] == True):
+            companyWordsSplit = str(company).split(" ")
+            companyWordsSplitIndex = len(companyWordsSplit)
+
+            for index in range(1,companyWordsSplitIndex):
+                likeCompany = " ".join(companyWordsSplit[:-index])
+
+                if likeCompany in toCompareCompaniesSet:
+                    commonCount += COMPANY_CLOSE_MATCH_REDUCTION
+                    break
+        else:
+            if company in toCompareCompaniesSet:
+                commonCount += 1
 
     distance = 0
 
@@ -235,6 +255,16 @@ def compareDirector(toPredictDirector, toCompareDirector):
 
     return distance
 
+def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDF):
+    toPredictCompanies = str(dfToPredict['production_companies']).split("|")
+
+    for company in toPredictCompanies:
+        companyMatches = dataSetDF.loc[dataSetDF['production_companies'] == company]
+
+        if (companyMatches.empty):
+            predictCompaniesCloseMatchBooleanList.append(True)
+        else:
+            predictCompaniesCloseMatchBooleanList.append(False)
 
 runAlgorithm()
 
