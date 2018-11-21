@@ -9,18 +9,20 @@ BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 #DIRECTOR_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
 DIRECTOR_DIST = {"1": 100, "2": 0}
 
+ACTOR_COMPAREDIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 10, "7": 5, "8": 0}
 ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6": 0}
 
 COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
 
 COMPANY_CLOSE_MATCH_REDUCTION = 0.5 #Reduce distance by 50%
 
-BUDGET_WEIGHT = 5000
-RUNTIME_WEIGHT = 1000
-DIRECTOR_WEIGHT = 1000
-GENRE_WEIGHT = 1000
-ACTOR_WEIGHT = 5000
-COMPANIES_WEIGHT = 5000
+BUDGET_WEIGHT = 0
+RUNTIME_WEIGHT = 0
+DIRECTOR_WEIGHT = 0
+GENRE_WEIGHT = 0
+ACTOR_WEIGHT = 0
+COMPANIES_WEIGHT = 0
+ACTOR_COMPAREWEIGHT = 1
 
 NUM_CANDIDATES = 20  # The number of candidates to keep track of
 
@@ -86,6 +88,9 @@ def calculateDistance(toPredict, toCompare):
     genreDist = matchGenres(toPredict['genres'], toCompare['genres'])
     actorDist = matchActors(toPredict['cast'], toCompare['cast'])
     companyDist = matchCompanies(toPredict['production_companies'], toCompare['production_companies'])
+    actorCompare = compareActorPoints(toPredict['cast'], toCompare['cast'])
+
+    #print("actorCompare = " + str(actorCompare))
 
     totalDist += runtimeDist * RUNTIME_WEIGHT
     totalDist += budgetDist * BUDGET_WEIGHT
@@ -93,6 +98,7 @@ def calculateDistance(toPredict, toCompare):
     totalDist += genreDist * GENRE_WEIGHT
     totalDist += actorDist * ACTOR_WEIGHT
     totalDist += companyDist * COMPANIES_WEIGHT
+    totalDist += actorCompare * ACTOR_COMPAREWEIGHT
 
     return totalDist
 
@@ -221,8 +227,6 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
             if company in toCompareCompaniesSet:
                 commonCount += 1
 
-    distance = 0
-
     if commonCount >= 3:
         distance = COMPANIES_DIST.get("1")
     elif commonCount == 2:
@@ -231,10 +235,6 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
         distance = COMPANIES_DIST.get("3")
     else:
         distance = COMPANIES_DIST.get("4")
-
-    if commonCount > 1:
-        print(distance)
-        print("\nCompanies: " + toCompareCompanies)
 
     return distance
 
@@ -292,6 +292,41 @@ def compareDirectorPoints(toPredictDirector, toCompareDirector):
         distance = DIRECTOR_DIST.get("8")
     else:
         distance = DIRECTOR_DIST.get("9")
+
+    return distance
+
+def compareActorPoints(toPredictActors, toCompareActors):
+
+    finalPoints = -1 #the highest actor point.
+
+    for thePredictActor in str(toPredictActors).split("|"):
+        for theCompareActor in str(toCompareActors).split("|"):
+            if thePredictActor in theCompareActor:
+                if "points" in theCompareActor:
+                    pointsIndexStart = theCompareActor.find(":")
+                    pointsIndexEnd = theCompareActor.find("points")
+                    points = int(theCompareActor[pointsIndexStart + 1:pointsIndexEnd - 1])
+                    if(points > finalPoints):
+                        finalPoints = points
+                else:
+                    finalPoints = 0
+
+    if finalPoints > 90000:
+        distance = ACTOR_COMPAREDIST.get("1")
+    elif 50000 < finalPoints <= 90000:
+        distance = ACTOR_COMPAREDIST.get("2")
+    elif 20000 < finalPoints <= 50000:
+        distance = ACTOR_COMPAREDIST.get("3")
+    elif 10000 < finalPoints <= 20000:
+        distance = ACTOR_COMPAREDIST.get("4")
+    elif 5000 < finalPoints <= 10000:
+        distance = ACTOR_COMPAREDIST.get("5")
+    elif 0 < finalPoints <= 5000:
+        distance = ACTOR_COMPAREDIST.get("6")
+    elif finalPoints == 0:
+        distance = ACTOR_COMPAREDIST.get("7")
+    else:
+        distance = ACTOR_COMPAREDIST.get("8")
 
     return distance
 
