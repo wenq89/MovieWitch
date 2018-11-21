@@ -39,41 +39,44 @@ predictCompaniesCloseMatchBooleanList = []
 def runAlgorithm():
 
     dataSetDF = pd.read_csv('tmbdWithPoints.csv', dtype='object')
-    dfToPredict = pd.read_csv('toPredict.csv', dtype='object').iloc[0]
+    dataFrame = pd.read_csv('toPredict.csv', dtype='object', error_bad_lines=False)
 
-    checkIfCompaniesCloseMatchesNeeded(dfToPredict, dataSetDF)
+    for dfToPredict in dataFrame.iterrows():
+        print("*******************************************************************************************************")
+    # dfToPredict = pd.read_csv('toPredict.csv', dtype='object').iloc[0]
+        dfToPredict = dfToPredict[1]
+        checkIfCompaniesCloseMatchesNeeded(dfToPredict, dataSetDF)
 
-    topCandidates = []
+        topCandidates = []
 
-    for i in range(NUM_CANDIDATES):
-        topCandidates.append((0, None))
+        for i in range(NUM_CANDIDATES):
+            topCandidates.append((0, None))
 
-    for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
+        for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
 
-        currentDist = calculateDistance(dfToPredict, row)
+            currentDist = calculateDistance(dfToPredict, row)
 
-        if currentDist > topCandidates[NUM_CANDIDATES - 1][0]:
-            topCandidates[NUM_CANDIDATES - 1] = (currentDist, row)
-            topCandidates = sorted(topCandidates, key=lambda x: x[0], reverse=True)
+            if currentDist > topCandidates[NUM_CANDIDATES - 1][0]:
+                topCandidates[NUM_CANDIDATES - 1] = (currentDist, row)
+                topCandidates = sorted(topCandidates, key=lambda x: x[0], reverse=True)
 
-    #for i in range(NUM_CANDIDATES):
-        #print("\nCandidate " + str(i + 1) + " Points: " + str(topCandidates[i][0]) + "   \n" + str(topCandidates[i][1]))
-
-    # Make the prediction based on the top candidates found
-    makePrediction(dfToPredict,topCandidates)
+        # Make the prediction based on the top candidates found
+        makePrediction(dfToPredict,topCandidates)
 
 
 def makePrediction(toPredict,candidateList):
 
-    actualRevenue = int(toPredict['actual_revenue'])
+    #actualRevenue = int(toPredict['actual_revenue'])
     predictedRevenue = predictRevenue(toPredict,candidateList)
-    print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
-    print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
+    #print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
+    #print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
+    print("Predicted Revenue: " + str(predictedRevenue))
 
-    actualRating = float(toPredict['actual_imdb_rating'])
+    #actualRating = float(toPredict['actual_imdb_rating'])
     predictedRating = predictRating(toPredict,candidateList)
-    print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
-    print("Difference in rating prediction: " + str(round((actualRating - predictedRating) / actualRating * 100, 2)) + "%")
+    #print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
+    #print("Difference in rating prediction: " + str(round((actualRating - predictedRating) / actualRating * 100, 2)) + "%")
+    print("Predicted Rating: " + str(predictedRating))
 
 def predictRevenue(toPredict, candidateList):
 
@@ -175,6 +178,23 @@ def calculateDistance(toPredict, toCompare):
     totalDist += companyDist * COMPANIES_WEIGHT
 
     return totalDist
+
+
+def evaluateVoteCount(toCompare):
+    weight = 0
+    if int(toCompare['vote_count']) >= 5000:
+        weight = 100
+    elif 3000 <= int(toCompare['vote_count']) < 5000:
+        weight = 80
+    elif 2000 <= int(toCompare['vote_count']) < 3000:
+        weight = 60
+    elif 1000 <= int(toCompare['vote_count']) < 2000:
+        weight = 40
+    elif 500 <= int(toCompare['vote_count']) < 1000:
+        weight = 20
+    else:
+        weight = 0
+    return weight
 
 
 def matchGenres(toPredictGenresString, toCompareGenresString):
@@ -312,9 +332,9 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     else:
         distance = COMPANIES_DIST.get("4")
 
-    if commonCount > 1:
-        print(distance)
-        print("\nCompanies: " + toCompareCompanies)
+    # if commonCount > 1:
+    #     print(distance)
+#        print("\nCompanies: " + toCompareCompanies)
 
     return distance
 
