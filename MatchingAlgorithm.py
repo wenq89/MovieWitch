@@ -13,8 +13,6 @@ ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6":
 
 COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
 
-COMPANY_CLOSE_MATCH_REDUCTION = 0.5 #Reduce distance by 50%
-
 BUDGET_WEIGHT = 5000
 RUNTIME_WEIGHT = 1000
 DIRECTOR_WEIGHT = 1000
@@ -29,17 +27,17 @@ predictCompaniesCloseMatchBooleanList = []
 
 def runAlgorithm():
 
-    dataSetDF = pd.read_csv('tmbdWithPoints.csv', dtype='object')
+    dataSetDf = pd.read_csv('tmbdWithPoints.csv', dtype='object')
     dfToPredict = pd.read_csv('toPredict.csv', dtype='object').iloc[0]
 
-    checkIfCompaniesCloseMatchesNeeded(dfToPredict, dataSetDF)
+    checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf)
 
     topCandidates = []
 
     for i in range(NUM_CANDIDATES):
         topCandidates.append((0, None))
 
-    for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
+    for index, row in dataSetDf.iterrows():  # Iterate all rows in our data-set
 
         currentDist = calculateDistance(dfToPredict, row)
 
@@ -191,21 +189,15 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     toPredictCompanies = str(toPredictCompanies).split("|")
     toCompareCompanies = str(toCompareCompanies).split("|")
 
-    toPredictCompaniesList = []
-    toCompareCompaniesList = []
+    toCompareLikeCompanies = []
 
-    for i in toPredictCompanies:
-        toPredictCompaniesList.append(i.split(":")[0])
-
-    for j in toCompareCompanies:
-        toCompareCompaniesList.append(j.split(":")[0])
-
-    toCompareCompaniesSet = set(toCompareCompaniesList)
+    for company in toCompareCompanies:
+        toCompareLikeCompanies = toCompareLikeCompanies + list(set(str(company).split(" ")) - set(toCompareLikeCompanies))
 
     commonCount = 0.0
 
-    for company in toPredictCompaniesList:
-        companyIndex = toPredictCompaniesList.index(company)
+    for company in toPredictCompanies:
+        companyIndex = toPredictCompanies.index(company)
 
         if (predictCompaniesCloseMatchBooleanList[companyIndex] == True):
             companyWordsSplit = str(company).split(" ")
@@ -213,12 +205,12 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
 
             for index in range(1,companyWordsSplitIndex):
                 likeCompany = " ".join(companyWordsSplit[:-index])
+                # companyLikeMatches = dataSetDf[dataSetDf['production_companies'].str.contains(likeCompany, na=False)]
 
-                if likeCompany in toCompareCompaniesSet:
-                    commonCount += COMPANY_CLOSE_MATCH_REDUCTION
-                    break
+                if  likeCompany in toCompareLikeCompanies:
+                    commonCount += (companyWordsSplitIndex-index) / float(companyWordsSplitIndex)
         else:
-            if company in toCompareCompaniesSet:
+            if company in toCompareCompanies:
                 commonCount += 1
 
     distance = 0
@@ -232,19 +224,15 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     else:
         distance = COMPANIES_DIST.get("4")
 
-    if commonCount > 1:
-        print(distance)
-        print("\nCompanies: " + toCompareCompanies)
-
     return distance
 
-def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDF):
+def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
     toPredictCompanies = str(dfToPredict['production_companies']).split("|")
 
     for company in toPredictCompanies:
-        companyMatches = dataSetDF.loc[dataSetDF['production_companies'] == company]
+        companyMatches = dataSetDf[dataSetDf['production_companies'] == company]
 
-        if (companyMatches.empty):
+        if companyMatches.empty:
             predictCompaniesCloseMatchBooleanList.append(True)
         else:
             predictCompaniesCloseMatchBooleanList.append(False)
