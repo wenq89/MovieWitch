@@ -199,21 +199,18 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     for company in toPredictCompanies:
         companyIndex = toPredictCompanies.index(company)
 
-        if (predictCompaniesCloseMatchBooleanList[companyIndex] == True):
+        if predictCompaniesCloseMatchBooleanList[companyIndex]:
             companyWordsSplit = str(company).split(" ")
             companyWordsSplitIndex = len(companyWordsSplit)
 
             for index in range(1,companyWordsSplitIndex):
                 likeCompany = " ".join(companyWordsSplit[:-index])
-                # companyLikeMatches = dataSetDf[dataSetDf['production_companies'].str.contains(likeCompany, na=False)]
 
                 if  likeCompany in toCompareLikeCompanies:
                     commonCount += (companyWordsSplitIndex-index) / float(companyWordsSplitIndex)
         else:
             if company in toCompareCompanies:
                 commonCount += 1
-
-    distance = 0
 
     if commonCount >= 3:
         distance = COMPANIES_DIST.get("1")
