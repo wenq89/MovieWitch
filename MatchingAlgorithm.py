@@ -11,6 +11,7 @@ DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "
 
 DIRECTOR_DIST = {"1": 100, "2": 0}
 
+ACTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 10, "7": 5, "8": 0}
 ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6": 0}
 
 COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
@@ -104,8 +105,7 @@ def predictRevenue(toPredict, candidateList):
 
     for candidate in finalRevenues:
         directorPoints = compareDirectorPoints(toPredict['director'], candidate[1][1]['director'])
-        # actorPoints = compareActorPoints()
-        actorPoints = 0
+        actorPoints = compareActorPoints(toPredict['cast'], candidate[1][1]['cast'])
         matchPoints = candidate[1][0] / np.max([float(x[1][0]) for x in finalRevenues]) * 100
         candidateWeight = PREDICTION_MATCHPOINTS_WEIGHT * matchPoints \
                           + PREDICTION_ACTOR_WEIGHT * actorPoints \
@@ -133,7 +133,7 @@ def predictRating(toPredict, candidateList):
 
     ratingMean = np.mean([x[0] for x in ratingRelevantCandidates])
     ratingSD = np.std([x[0] for x in ratingRelevantCandidates])
-    #finalRatings = ratingRelevantCandidates
+
     finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean + 2 * ratingSD)]
     finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - 0.1 * ratingSD)]
 
@@ -141,8 +141,10 @@ def predictRating(toPredict, candidateList):
 
     for candidate in finalRatings:
         directorPoints = compareDirectorPoints(toPredict['director'], candidate[1][1]['director'])
-        # actorPoints = compareActorPoints()
-        actorPoints = 0
+        actorPoints = compareActorPoints(toPredict['cast'], candidate[1][1]['cast'])
+        if actorPoints > 0:
+            print("QI WOrks")
+
         voteCountPoints = int(candidate[1][1]['vote_count'])
         matchPoints = candidate[1][0] / np.max([float(x[1][0]) for x in finalRatings]) * 100
         candidateWeight = PREDICTION_MATCHPOINTS_WEIGHT * matchPoints \
@@ -321,8 +323,6 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
             if company in toCompareCompaniesSet:
                 commonCount += 1
 
-    distance = 0
-
     if commonCount >= 3:
         distance = COMPANIES_DIST.get("1")
     elif commonCount == 2:
@@ -394,6 +394,41 @@ def compareDirectorPoints(toPredictDirector, toCompareDirector):
         distance = DIRECTOR_POINTS_DIST.get("9")
     if points > 0:
         print(str(points))
+    return distance
+
+def compareActorPoints(toPredictActors, toCompareActors):
+
+    finalPoints = -1 #the highest actor point.
+
+    for thePredictActor in str(toPredictActors).split("|"):
+        for theCompareActor in str(toCompareActors).split("|"):
+            if thePredictActor in theCompareActor:
+                if "points" in theCompareActor:
+                    pointsIndexStart = theCompareActor.find(":")
+                    pointsIndexEnd = theCompareActor.find("points")
+                    points = int(theCompareActor[pointsIndexStart + 1:pointsIndexEnd - 1])
+                    if(points > finalPoints):
+                        finalPoints = points
+                else:
+                    finalPoints = 0
+
+    if finalPoints > 90000:
+        distance = ACTOR_POINTS_DIST.get("1")
+    elif 50000 < finalPoints <= 90000:
+        distance = ACTOR_POINTS_DIST.get("2")
+    elif 20000 < finalPoints <= 50000:
+        distance = ACTOR_POINTS_DIST.get("3")
+    elif 10000 < finalPoints <= 20000:
+        distance = ACTOR_POINTS_DIST.get("4")
+    elif 5000 < finalPoints <= 10000:
+        distance = ACTOR_POINTS_DIST.get("5")
+    elif 0 < finalPoints <= 5000:
+        distance = ACTOR_POINTS_DIST.get("6")
+    elif finalPoints == 0:
+        distance = ACTOR_POINTS_DIST.get("7")
+    else:
+        distance = ACTOR_POINTS_DIST.get("8")
+
     return distance
 
 runAlgorithm()
