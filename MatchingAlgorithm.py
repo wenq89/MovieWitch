@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Distribution of points for the runtime comparison
 RUNTIME_DIST = {"1": 100, "2": 92.1, "3": 82.7, "4": 71.2, "5": 56.5, "6": 35.6, "7": 0}
@@ -6,7 +7,8 @@ RUNTIME_DIST = {"1": 100, "2": 92.1, "3": 82.7, "4": 71.2, "5": 56.5, "6": 35.6,
 # Distribution of points for the budget comparison
 BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 
-#DIRECTOR_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
+DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
+
 DIRECTOR_DIST = {"1": 100, "2": 0}
 
 ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6": 0}
@@ -15,14 +17,21 @@ COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
 
 COMPANY_CLOSE_MATCH_REDUCTION = 0.5 #Reduce distance by 50%
 
-BUDGET_WEIGHT = 5000
-RUNTIME_WEIGHT = 1000
-DIRECTOR_WEIGHT = 1000
-GENRE_WEIGHT = 1000
-ACTOR_WEIGHT = 5000
-COMPANIES_WEIGHT = 5000
+#Weights used to match closeness of candidates
+BUDGET_WEIGHT = 50
+RUNTIME_WEIGHT = 1
+DIRECTOR_WEIGHT = 1
+GENRE_WEIGHT = 1
+ACTOR_WEIGHT = 25
+COMPANIES_WEIGHT = 1
 
-NUM_CANDIDATES = 20  # The number of candidates to keep track of
+#Weights used to make the prediciton based off of the candidates
+PREDICTION_ACTOR_WEIGHT = 1
+PREDICTION_DIRECTOR_WEIGHT = 1
+PREDICTION_MATCHPOINTS_WEIGHT = 1
+PREDICTION_VOTECOUNT_WEIGHT = 1
+
+NUM_CANDIDATES = 15  # The number of candidates to keep track of
 
 #List of boolean, in same order as companies given, to see if close match is required
 predictCompaniesCloseMatchBooleanList = []
@@ -47,34 +56,105 @@ def runAlgorithm():
             topCandidates[NUM_CANDIDATES - 1] = (currentDist, row)
             topCandidates = sorted(topCandidates, key=lambda x: x[0], reverse=True)
 
-    for i in range(NUM_CANDIDATES):
-        print("\nCandidate " + str(i + 1) + " Points: " + str(topCandidates[i][0]) + "   \n" + str(topCandidates[i][1]))
+    #for i in range(NUM_CANDIDATES):
+        #print("\nCandidate " + str(i + 1) + " Points: " + str(topCandidates[i][0]) + "   \n" + str(topCandidates[i][1]))
 
     # Make the prediction based on the top candidates found
-    makePrediction(topCandidates)
+    makePrediction(dfToPredict,topCandidates)
 
 
-def makePrediction(candidateList):
+def makePrediction(toPredict,candidateList):
 
-    revPrediction = 0
-    ratingPrediction = 0
-    numberOfRatings = 0
-    totalPoints = 0
+    actualRevenue = int(toPredict['actual_revenue'])
+    predictedRevenue = predictRevenue(toPredict,candidateList)
+    print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
+    print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
+
+    actualRating = float(toPredict['actual_imdb_rating'])
+    predictedRating = predictRating(toPredict,candidateList)
+    print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
+    print("Difference in rating prediction: " + str(round((actualRating - predictedRating) / actualRating * 100, 2)) + "%")
+
+def predictRevenue(toPredict, candidateList):
+
+    revenueRelevantCandidates = []
+
+    #Remove candidates with revenue of 0 where there is not data on the revenue
+    for candidate in candidateList:
+
+        currentCandidate = candidate[1]
+
+        if int(currentCandidate['revenue']) > 0:
+            revenueRelevantCandidates.append((float(currentCandidate['revenue']), candidate))
+
+    #Calculate the mean and standard deviation of the candidates revenue
+    revenueMean = np.mean([x[0] for x in revenueRelevantCandidates])
+    revenueSD = np.std([x[0] for x in revenueRelevantCandidates])
+
+    #Remove outliers from the candidates
+    finalRevenues = [x for x in revenueRelevantCandidates if (float(x[0]) < revenueMean + 3 * revenueSD)]
+    finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - 0.1 * revenueSD)]
+
+
+    #Add the weights for each of the remaining candidates
+    finalRevenueCandidatesWithWeight = []
+
+    for candidate in finalRevenues:
+        directorPoints = compareDirectorPoints(toPredict['director'], candidate[1][1]['director'])
+        # actorPoints = compareActorPoints()
+        actorPoints = 0
+        matchPoints = candidate[1][0] / np.max([float(x[1][0]) for x in finalRevenues]) * 100
+        candidateWeight = PREDICTION_MATCHPOINTS_WEIGHT * matchPoints \
+                          + PREDICTION_ACTOR_WEIGHT * actorPoints \
+                          + PREDICTION_DIRECTOR_WEIGHT * directorPoints
+        finalRevenueCandidatesWithWeight.append((candidateWeight, candidate[0]))
+
+    #Calculate the prediction
+    sumRevenueCandidateWeights = np.sum([float(x[0]) for x in finalRevenueCandidatesWithWeight])
+    sumRevenueTimesCandidateWeight = np.sum([float(x[0]) * float(x[1]) for x in finalRevenueCandidatesWithWeight])
+
+    revenuePrediction = float(sumRevenueTimesCandidateWeight / sumRevenueCandidateWeights)
+
+    return revenuePrediction
+
+def predictRating(toPredict, candidateList):
+
+    ratingRelevantCandidates = []
 
     for candidate in candidateList:
 
+        currentCandidate = candidate[1]
 
-        if int(candidate[1]['revenue']) > 0:
-            revPrediction += int(candidate[1]['revenue']) * int(candidate[0])
-            totalPoints += candidate[0]
-            ratingPrediction += float(candidate[1]['vote_average']) * float(candidate[1]['vote_count']) * float(candidate[0])
-            numberOfRatings += float(candidate[1]['vote_count']) * float(candidate[0])
+        if float(currentCandidate['vote_average']) > 0:
+            ratingRelevantCandidates.append((float(currentCandidate['vote_average']), candidate))
 
-    print(str(revPrediction))
-    print(ratingPrediction)
-    print("\nRevenue Prediction: " + str(revPrediction / (NUM_CANDIDATES * totalPoints)))
-    print("\nRating Prediction: " + str(ratingPrediction / numberOfRatings ))
+    ratingMean = np.mean([x[0] for x in ratingRelevantCandidates])
+    ratingSD = np.std([x[0] for x in ratingRelevantCandidates])
+    #finalRatings = ratingRelevantCandidates
+    finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean + 2 * ratingSD)]
+    finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - 0.1 * ratingSD)]
 
+    finalRatingCandidatesWithWeight = []
+
+    for candidate in finalRatings:
+        directorPoints = compareDirectorPoints(toPredict['director'], candidate[1][1]['director'])
+        # actorPoints = compareActorPoints()
+        actorPoints = 0
+        voteCountPoints = int(candidate[1][1]['vote_count'])
+        matchPoints = candidate[1][0] / np.max([float(x[1][0]) for x in finalRatings]) * 100
+        candidateWeight = PREDICTION_MATCHPOINTS_WEIGHT * matchPoints \
+                          + PREDICTION_ACTOR_WEIGHT * actorPoints \
+                          + PREDICTION_DIRECTOR_WEIGHT * directorPoints \
+                          + PREDICTION_VOTECOUNT_WEIGHT * voteCountPoints
+
+        finalRatingCandidatesWithWeight.append((candidateWeight, candidate[0]))
+
+    sumRatingCandidateWeights = np.sum([float(x[0]) for x in finalRatingCandidatesWithWeight])
+    sumRatingTimesCandidateWeight = np.sum([float(x[0]) * float(x[1]) for x in finalRatingCandidatesWithWeight])
+
+    ratingPrediction = float(sumRatingTimesCandidateWeight / sumRatingCandidateWeights)
+
+    return ratingPrediction
 
 def calculateDistance(toPredict, toCompare):
 
@@ -244,7 +324,7 @@ def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDF):
     for company in toPredictCompanies:
         companyMatches = dataSetDF.loc[dataSetDF['production_companies'] == company]
 
-        if (companyMatches.empty):
+        if companyMatches.empty:
             predictCompaniesCloseMatchBooleanList.append(True)
         else:
             predictCompaniesCloseMatchBooleanList.append(False)
@@ -275,24 +355,25 @@ def compareDirectorPoints(toPredictDirector, toCompareDirector):
                      points = 0
 
     if points > 50000:
-        distance = DIRECTOR_DIST.get("1")
+        distance = DIRECTOR_POINTS_DIST.get("1")
     elif 20000 < points <= 50000:
-        distance = DIRECTOR_DIST.get("2")
+        distance = DIRECTOR_POINTS_DIST.get("2")
     elif 10000 < points <= 20000:
-        distance = DIRECTOR_DIST.get("3")
+        distance = DIRECTOR_POINTS_DIST.get("3")
     elif 5000 < points <= 10000:
-        distance = DIRECTOR_DIST.get("4")
+        distance = DIRECTOR_POINTS_DIST.get("4")
     elif 2000 < points <= 5000:
-        distance = DIRECTOR_DIST.get("5")
+        distance = DIRECTOR_POINTS_DIST.get("5")
     elif 1000 < points <= 2000:
-        distance = DIRECTOR_DIST.get("6")
+        distance = DIRECTOR_POINTS_DIST.get("6")
     elif 0 < points <= 1000:
-        distance = DIRECTOR_DIST.get("7")
+        distance = DIRECTOR_POINTS_DIST.get("7")
     elif points == 0:
-        distance = DIRECTOR_DIST.get("8")
+        distance = DIRECTOR_POINTS_DIST.get("8")
     else:
-        distance = DIRECTOR_DIST.get("9")
-
+        distance = DIRECTOR_POINTS_DIST.get("9")
+    if points > 0:
+        print(str(points))
     return distance
 
 runAlgorithm()

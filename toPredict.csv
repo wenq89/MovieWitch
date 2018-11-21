@@ -1,2 +1,2 @@
-budget,title,cast,director,keywords,runtime,genres,production_companies
-110000000,Venom,Tom Hardy|Michelle Williams|Riz Ahmed,Ruben Fleischer,Holder,112,Action|Science Fiction,Marvel Studios|Avi Arad Productions|Columbia Pictures
+budget,title,cast,director,keywords,runtime,genres,production_companies,actual_revenue,actual_imdb_rating
+110000000,Venom,Tom Hardy|Michelle Williams|Riz Ahmed,Ruben Fleischer,Holder,112,Action|Science Fiction,Marvel Studios|Avi Arad Productions|Columbia Pictures,550000000,7.0
