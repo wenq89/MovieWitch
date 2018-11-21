@@ -16,19 +16,17 @@ ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6":
 
 COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
 
-COMPANY_CLOSE_MATCH_REDUCTION = 0.5 #Reduce distance by 50%
-
 #Weights used to match closeness of candidates
-BUDGET_WEIGHT = 50
+BUDGET_WEIGHT = 5
 RUNTIME_WEIGHT = 1
-DIRECTOR_WEIGHT = 1
+DIRECTOR_WEIGHT = 7
 GENRE_WEIGHT = 1
-ACTOR_WEIGHT = 25
-COMPANIES_WEIGHT = 1
+ACTOR_WEIGHT = 7
+COMPANIES_WEIGHT = 3
 
 #Weights used to make the prediciton based off of the candidates
-PREDICTION_ACTOR_WEIGHT = 1
-PREDICTION_DIRECTOR_WEIGHT = 1
+PREDICTION_ACTOR_WEIGHT = 3
+PREDICTION_DIRECTOR_WEIGHT = 2
 PREDICTION_MATCHPOINTS_WEIGHT = 1
 PREDICTION_VOTECOUNT_WEIGHT = 1
 
@@ -293,34 +291,27 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     toPredictCompanies = str(toPredictCompanies).split("|")
     toCompareCompanies = str(toCompareCompanies).split("|")
 
-    toPredictCompaniesList = []
-    toCompareCompaniesList = []
+    toCompareLikeCompanies = []
 
-    for i in toPredictCompanies:
-        toPredictCompaniesList.append(i.split(":")[0])
-
-    for j in toCompareCompanies:
-        toCompareCompaniesList.append(j.split(":")[0])
-
-    toCompareCompaniesSet = set(toCompareCompaniesList)
+    for company in toCompareCompanies:
+        toCompareLikeCompanies = toCompareLikeCompanies + list(set(str(company).split(" ")) - set(toCompareLikeCompanies))
 
     commonCount = 0.0
 
-    for company in toPredictCompaniesList:
-        companyIndex = toPredictCompaniesList.index(company)
+    for company in toPredictCompanies:
+        companyIndex = toPredictCompanies.index(company)
 
-        if (predictCompaniesCloseMatchBooleanList[companyIndex] == True):
+        if predictCompaniesCloseMatchBooleanList[companyIndex]:
             companyWordsSplit = str(company).split(" ")
             companyWordsSplitIndex = len(companyWordsSplit)
 
             for index in range(1,companyWordsSplitIndex):
                 likeCompany = " ".join(companyWordsSplit[:-index])
 
-                if likeCompany in toCompareCompaniesSet:
-                    commonCount += COMPANY_CLOSE_MATCH_REDUCTION
-                    break
+                if  likeCompany in toCompareLikeCompanies:
+                    commonCount += (companyWordsSplitIndex-index) / float(companyWordsSplitIndex)
         else:
-            if company in toCompareCompaniesSet:
+            if company in toCompareCompanies:
                 commonCount += 1
 
     if commonCount >= 3:
@@ -338,11 +329,11 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
 
     return distance
 
-def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDF):
+def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
     toPredictCompanies = str(dfToPredict['production_companies']).split("|")
 
     for company in toPredictCompanies:
-        companyMatches = dataSetDF.loc[dataSetDF['production_companies'] == company]
+        companyMatches = dataSetDf[dataSetDf['production_companies'] == company]
 
         if companyMatches.empty:
             predictCompaniesCloseMatchBooleanList.append(True)
