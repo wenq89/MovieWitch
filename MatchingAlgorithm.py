@@ -37,7 +37,7 @@ predictCompaniesCloseMatchBooleanList = []
 
 def runAlgorithm():
 
-    dataSetDF = pd.read_csv('tmbdWithPoints.csv', dtype='object')
+    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', dtype='object')
     dataFrame = pd.read_csv('toPredict.csv', dtype='object', error_bad_lines=False)
 
     for dfToPredict in dataFrame.iterrows():
@@ -164,7 +164,7 @@ def calculateDistance(toPredict, toCompare):
     totalDist = 0
 
     runtimeDist = matchRuntime(toPredict['runtime'], toCompare['runtime'])
-    budgetDist = matchBudget(toPredict['budget'], toCompare['budget'])
+    budgetDist = matchBudget(toPredict['budget'], toCompare['budget_adj'])
     directorDist = matchDirector(toPredict['director'], toCompare['director'])
     genreDist = matchGenres(toPredict['genres'], toCompare['genres'])
     actorDist = matchActors(toPredict['cast'], toCompare['cast'])
@@ -322,10 +322,6 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
         distance = COMPANIES_DIST.get("3")
     else:
         distance = COMPANIES_DIST.get("4")
-
-    # if commonCount > 1:
-    #     print(distance)
-#        print("\nCompanies: " + toCompareCompanies)
 
     return distance
 
