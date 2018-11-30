@@ -37,7 +37,7 @@ predictCompaniesCloseMatchBooleanList = []
 
 def runAlgorithm():
 
-    dataSetDF = pd.read_csv('tmbdWithPoints.csv', dtype='object')
+    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', dtype='object')
     dataFrame = pd.read_csv('toPredict.csv', dtype='object', error_bad_lines=False)
 
     for dfToPredict in dataFrame.iterrows():
@@ -84,8 +84,8 @@ def predictRevenue(toPredict, candidateList):
 
         currentCandidate = candidate[1]
 
-        if int(currentCandidate['revenue']) > 0:
-            revenueRelevantCandidates.append((float(currentCandidate['revenue']), candidate))
+        if int(currentCandidate['revenue_adj']) > 0:
+            revenueRelevantCandidates.append((float(currentCandidate['revenue_adj']), candidate))
 
     #Calculate the mean and standard deviation of the candidates revenue
     revenueMean = np.mean([x[0] for x in revenueRelevantCandidates])
@@ -124,8 +124,8 @@ def predictRating(toPredict, candidateList):
 
         currentCandidate = candidate[1]
 
-        if float(currentCandidate['vote_average']) > 0:
-            ratingRelevantCandidates.append((float(currentCandidate['vote_average']), candidate))
+        if float(currentCandidate['vote_avg']) > 0:
+            ratingRelevantCandidates.append((float(currentCandidate['vote_avg']), candidate))
 
     ratingMean = np.mean([x[0] for x in ratingRelevantCandidates])
     ratingSD = np.std([x[0] for x in ratingRelevantCandidates])
@@ -159,7 +159,7 @@ def calculateDistance(toPredict, toCompare):
     totalDist = 0
 
     runtimeDist = matchRuntime(toPredict['runtime'], toCompare['runtime'])
-    budgetDist = matchBudget(toPredict['budget'], toCompare['budget'])
+    budgetDist = matchBudget(toPredict['budget'], toCompare['budget_adj'])
     directorDist = matchDirector(toPredict['director'], toCompare['director'])
     genreDist = matchGenres(toPredict['genres'], toCompare['genres'])
     actorDist = matchActors(toPredict['cast'], toCompare['cast'])
@@ -318,10 +318,6 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     else:
         distance = COMPANIES_DIST.get("4")
 
-    # if commonCount > 1:
-    #     print(distance)
-#        print("\nCompanies: " + toCompareCompanies)
-
     return distance
 
 def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
@@ -423,3 +419,11 @@ runAlgorithm()
 # toCompare = "Action|Adventure|Fantasy|Science Fiction"
 # result = compareGenres(toPredict, toCompare)
 # print("**** " + str(result))
+
+# Predicted Revenue: 205328146.68656018
+# 2598
+# Predicted Rating: 6.181582164882405
+
+# Predicted Revenue: 246630469.70744947
+# 2598
+# Predicted Rating: 6.181582164882405
