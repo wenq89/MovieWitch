@@ -17,20 +17,20 @@ ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6":
 COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
 
 #Weights used to match closeness of candidates
-BUDGET_WEIGHT = 5
-RUNTIME_WEIGHT = 1
-DIRECTOR_WEIGHT = 7
-GENRE_WEIGHT = 1
-ACTOR_WEIGHT = 7
+BUDGET_WEIGHT = 4
+RUNTIME_WEIGHT = 0
+DIRECTOR_WEIGHT = 2
+GENRE_WEIGHT = 0
+ACTOR_WEIGHT = 5
 COMPANIES_WEIGHT = 3
 
 #Weights used to make the prediciton based off of the candidates
 PREDICTION_ACTOR_WEIGHT = 3
-PREDICTION_DIRECTOR_WEIGHT = 2
-PREDICTION_MATCHPOINTS_WEIGHT = 1
-PREDICTION_VOTECOUNT_WEIGHT = 1
+PREDICTION_DIRECTOR_WEIGHT = 1
+PREDICTION_MATCHPOINTS_WEIGHT = 3
+PREDICTION_VOTECOUNT_WEIGHT = 5
 
-NUM_CANDIDATES = 15  # The number of candidates to keep track of
+NUM_CANDIDATES = 3  # The number of candidates to keep track of
 
 #List of boolean, in same order as companies given, to see if close match is required
 predictCompaniesCloseMatchBooleanList = []
@@ -42,7 +42,6 @@ def runAlgorithm():
 
     for dfToPredict in dataFrame.iterrows():
         print("*******************************************************************************************************")
-    # dfToPredict = pd.read_csv('toPredict.csv', dtype='object').iloc[0]
         dfToPredict = dfToPredict[1]
         checkIfCompaniesCloseMatchesNeeded(dfToPredict, dataSetDF)
 
@@ -65,17 +64,16 @@ def runAlgorithm():
 
 def makePrediction(toPredict,candidateList):
 
-    #actualRevenue = int(toPredict['actual_revenue'])
+    print("Predicting for: " + toPredict['title'])
+    actualRevenue = int(toPredict['actual_revenue'])
     predictedRevenue = predictRevenue(toPredict,candidateList)
-    #print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
-    #print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
-    print("Predicted Revenue: " + str(predictedRevenue))
+    print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
+    print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
 
-    #actualRating = float(toPredict['actual_imdb_rating'])
+    actualRating = float(toPredict['actual_imdb_rating'])
     predictedRating = predictRating(toPredict,candidateList)
-    #print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
-    #print("Difference in rating prediction: " + str(round((actualRating - predictedRating) / actualRating * 100, 2)) + "%")
-    print("Predicted Rating: " + str(predictedRating))
+    print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
+    print("Difference in rating prediction: " + str(round((actualRating - predictedRating) / actualRating * 100, 2)) + "%")
 
 def predictRevenue(toPredict, candidateList):
 
@@ -94,8 +92,8 @@ def predictRevenue(toPredict, candidateList):
     revenueSD = np.std([x[0] for x in revenueRelevantCandidates])
 
     #Remove outliers from the candidates
-    finalRevenues = [x for x in revenueRelevantCandidates if (float(x[0]) < revenueMean + 3 * revenueSD)]
-    finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - 0.1 * revenueSD)]
+    finalRevenues = [x for x in revenueRelevantCandidates if (float(x[0]) < revenueMean + 2 * revenueSD)]
+    finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - 2 * revenueSD)]
 
 
     #Add the weights for each of the remaining candidates
@@ -133,16 +131,13 @@ def predictRating(toPredict, candidateList):
     ratingSD = np.std([x[0] for x in ratingRelevantCandidates])
 
     finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean + 2 * ratingSD)]
-    finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - 0.1 * ratingSD)]
+    finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - 0.5 * ratingSD)]
 
     finalRatingCandidatesWithWeight = []
 
     for candidate in finalRatings:
         directorPoints = compareDirectorPoints(toPredict['director'], candidate[1][1]['director'])
         actorPoints = compareActorPoints(toPredict['cast'], candidate[1][1]['cast'])
-        if actorPoints > 0:
-            print("QI WOrks")
-
         voteCountPoints = int(candidate[1][1]['vote_count'])
         matchPoints = candidate[1][0] / np.max([float(x[1][0]) for x in finalRatings]) * 100
         candidateWeight = PREDICTION_MATCHPOINTS_WEIGHT * matchPoints \
@@ -383,8 +378,7 @@ def compareDirectorPoints(toPredictDirector, toCompareDirector):
         distance = DIRECTOR_POINTS_DIST.get("8")
     else:
         distance = DIRECTOR_POINTS_DIST.get("9")
-    if points > 0:
-        print(str(points))
+
     return distance
 
 def compareActorPoints(toPredictActors, toCompareActors):
