@@ -385,7 +385,7 @@ def compareDirectorPoints(toPredictDirector, toCompareDirector):
 
 def compareActorPoints(toPredictActors, toCompareActors):
 
-    finalPoints = -1 #the highest actor point.
+    pointsList = []
 
     for thePredictActor in str(toPredictActors).split("|"):
         for theCompareActor in str(toCompareActors).split("|"):
@@ -394,27 +394,30 @@ def compareActorPoints(toPredictActors, toCompareActors):
                     pointsIndexStart = theCompareActor.find(":")
                     pointsIndexEnd = theCompareActor.find("points")
                     points = int(theCompareActor[pointsIndexStart + 1:pointsIndexEnd - 1])
-                    if(points > finalPoints):
-                        finalPoints = points
+                    pointsList.append(points) #match with points
                 else:
-                    finalPoints = 0
+                    pointsList.append(0) #match without points
 
-    if finalPoints > 90000:
-        distance = ACTOR_POINTS_DIST.get("1")
-    elif 50000 < finalPoints <= 90000:
-        distance = ACTOR_POINTS_DIST.get("2")
-    elif 20000 < finalPoints <= 50000:
-        distance = ACTOR_POINTS_DIST.get("3")
-    elif 10000 < finalPoints <= 20000:
-        distance = ACTOR_POINTS_DIST.get("4")
-    elif 5000 < finalPoints <= 10000:
-        distance = ACTOR_POINTS_DIST.get("5")
-    elif 0 < finalPoints <= 5000:
-        distance = ACTOR_POINTS_DIST.get("6")
-    elif finalPoints == 0:
-        distance = ACTOR_POINTS_DIST.get("7")
-    else:
-        distance = ACTOR_POINTS_DIST.get("8")
+    distance = 0
+
+    if len(pointsList) == 0:
+        distance = ACTOR_POINTS_DIST.get("8") #do not match
+
+    for finalPoints in pointsList:
+        if finalPoints > 90000:
+            distance += ACTOR_POINTS_DIST.get("1")
+        elif 50000 < finalPoints <= 90000:
+            distance += ACTOR_POINTS_DIST.get("2")
+        elif 20000 < finalPoints <= 50000:
+            distance += ACTOR_POINTS_DIST.get("3")
+        elif 10000 < finalPoints <= 20000:
+            distance += ACTOR_POINTS_DIST.get("4")
+        elif 5000 < finalPoints <= 10000:
+            distance += ACTOR_POINTS_DIST.get("5")
+        elif 0 < finalPoints <= 5000:
+            distance += ACTOR_POINTS_DIST.get("6")
+        elif finalPoints == 0:
+            distance += ACTOR_POINTS_DIST.get("7")
 
     return distance
 
