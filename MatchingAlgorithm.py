@@ -12,25 +12,29 @@ DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "
 DIRECTOR_DIST = {"1": 100, "2": 0}
 
 ACTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 10, "7": 5, "8": 0}
-ACTOR_DIST = {"1": 100, "2": 89.842, "3": 77.371, "4": 61.315, "5": 38.685, "6": 0}
+ACTOR_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 
-COMPANIES_DIST = {"1": 100, "2": 79.248, "3": 50, "4": 0}
+COMPANIES_DIST = {"1": 100, "2": 79.2, "3": 50, "4": 0}
 
 #Weights used to match closeness of candidates
-BUDGET_WEIGHT = 4
-RUNTIME_WEIGHT = 0
-DIRECTOR_WEIGHT = 2
-GENRE_WEIGHT = 0
-ACTOR_WEIGHT = 5
-COMPANIES_WEIGHT = 3
+BUDGET_WEIGHT = 5
+RUNTIME_WEIGHT = 1
+DIRECTOR_WEIGHT = 6
+GENRE_WEIGHT = 1
+ACTOR_WEIGHT = 10
+COMPANIES_WEIGHT = 700000
 
 #Weights used to make the prediciton based off of the candidates
-PREDICTION_ACTOR_WEIGHT = 3
+PREDICTION_ACTOR_WEIGHT = 1
 PREDICTION_DIRECTOR_WEIGHT = 1
-PREDICTION_MATCHPOINTS_WEIGHT = 3
-PREDICTION_VOTECOUNT_WEIGHT = 5
+PREDICTION_MATCHPOINTS_WEIGHT = 100
+PREDICTION_VOTECOUNT_WEIGHT = 1
 
-NUM_CANDIDATES = 3  # The number of candidates to keep track of
+NUM_CANDIDATES = 3 # The number of candidates to keep track of
+
+WITHIN_TEN = []
+withinFifteen = []
+withinFive = []
 
 #List of boolean, in same order as companies given, to see if close match is required
 predictCompaniesCloseMatchBooleanList = []
@@ -61,19 +65,38 @@ def runAlgorithm():
         # Make the prediction based on the top candidates found
         makePrediction(dfToPredict,topCandidates)
 
+    print("Within 5%: " + str(len(withinFive)))
+    print("Within 10%: " + str(len(WITHIN_TEN)))
+    print("Within 15%: " + str(len(withinFifteen)))
 
 def makePrediction(toPredict,candidateList):
 
+
     print("Predicting for: " + toPredict['title'])
+    print("Candidates: " + str(candidateList))
     actualRevenue = int(toPredict['actual_revenue'])
     predictedRevenue = predictRevenue(toPredict,candidateList)
     print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
     print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
 
+    percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
+
+    if (abs(percentDiff) <= 10):
+        WITHIN_TEN.append(0)
+
+    if (abs(percentDiff) <= 15):
+        withinFifteen.append(0)
+
+    if (abs(percentDiff) <= 5):
+        withinFive.append(0)
+
     actualRating = float(toPredict['actual_imdb_rating'])
     predictedRating = predictRating(toPredict,candidateList)
     print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
-    print("Difference in rating prediction: " + str(round((actualRating - predictedRating) / actualRating * 100, 2)) + "%")
+
+    percentDiff = round((actualRating - predictedRating) / actualRating * 100, 2)
+
+    print("Difference in rating prediction: " + str(percentDiff) + "%")
 
 def predictRevenue(toPredict, candidateList):
 
@@ -92,8 +115,8 @@ def predictRevenue(toPredict, candidateList):
     revenueSD = np.std([x[0] for x in revenueRelevantCandidates])
 
     #Remove outliers from the candidates
-    finalRevenues = [x for x in revenueRelevantCandidates if (float(x[0]) < revenueMean + 2 * revenueSD)]
-    finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - 2 * revenueSD)]
+    finalRevenues = [x for x in revenueRelevantCandidates if (float(x[0]) < revenueMean + 3 * revenueSD)]
+    finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - 0.25 * revenueSD)]
 
 
     #Add the weights for each of the remaining candidates
@@ -321,10 +344,11 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     return distance
 
 def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
+    predictCompaniesCloseMatchBooleanList.clear()
     toPredictCompanies = str(dfToPredict['production_companies']).split("|")
 
     for company in toPredictCompanies:
-        companyMatches = dataSetDf[dataSetDf['production_companies'] == company]
+        companyMatches = dataSetDf[dataSetDf['production_companies'].str.contains(company,na=False)]
 
         if companyMatches.empty:
             predictCompaniesCloseMatchBooleanList.append(True)
