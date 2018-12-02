@@ -321,10 +321,11 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     return distance
 
 def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
+    predictCompaniesCloseMatchBooleanList.clear()
     toPredictCompanies = str(dfToPredict['production_companies']).split("|")
 
     for company in toPredictCompanies:
-        companyMatches = dataSetDf[dataSetDf['production_companies'] == company]
+        companyMatches = dataSetDf[dataSetDf['production_companies'].str.contains(company,na=False)]
 
         if companyMatches.empty:
             predictCompaniesCloseMatchBooleanList.append(True)
