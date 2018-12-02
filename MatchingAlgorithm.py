@@ -17,24 +17,26 @@ ACTOR_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 COMPANIES_DIST = {"1": 100, "2": 79.2, "3": 50, "4": 0}
 
 #Weights used to match closeness of candidates
-BUDGET_WEIGHT = 5
+BUDGET_WEIGHT = 1
 RUNTIME_WEIGHT = 1
-DIRECTOR_WEIGHT = 6
-GENRE_WEIGHT = 1
-ACTOR_WEIGHT = 10
-COMPANIES_WEIGHT = 700000
+DIRECTOR_WEIGHT = 5
+GENRE_WEIGHT = 2
+ACTOR_WEIGHT = 7
+COMPANIES_WEIGHT = 1
 
 #Weights used to make the prediciton based off of the candidates
-PREDICTION_ACTOR_WEIGHT = 1
-PREDICTION_DIRECTOR_WEIGHT = 1
-PREDICTION_MATCHPOINTS_WEIGHT = 100
-PREDICTION_VOTECOUNT_WEIGHT = 1
+PREDICTION_ACTOR_WEIGHT = 3
+PREDICTION_DIRECTOR_WEIGHT = 4
+PREDICTION_MATCHPOINTS_WEIGHT = 5
+PREDICTION_VOTECOUNT_WEIGHT = 3
 
-NUM_CANDIDATES = 3 # The number of candidates to keep track of
+NUM_CANDIDATES = 13 # The number of candidates to keep track of
 
-WITHIN_TEN = []
-withinFifteen = []
 withinFive = []
+withinTen = []
+withinFifteen = []
+withinTwenty = []
+withinThirty = []
 
 #List of boolean, in same order as companies given, to see if close match is required
 predictCompaniesCloseMatchBooleanList = []
@@ -65,36 +67,43 @@ def runAlgorithm():
         # Make the prediction based on the top candidates found
         makePrediction(dfToPredict,topCandidates)
 
+    print()
     print("Within 5%: " + str(len(withinFive)))
-    print("Within 10%: " + str(len(WITHIN_TEN)))
+    print("Within 10%: " + str(len(withinTen)))
     print("Within 15%: " + str(len(withinFifteen)))
+    print("Within 20%: " + str(len(withinTwenty)))
+    print("Within 30%: " + str(len(withinThirty)))
 
 def makePrediction(toPredict,candidateList):
-
-
     print("Predicting for: " + toPredict['title'])
-    print("Candidates: " + str(candidateList))
-    actualRevenue = int(toPredict['actual_revenue'])
-    predictedRevenue = predictRevenue(toPredict,candidateList)
-    print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
-    print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
-
-    percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
-
-    if (abs(percentDiff) <= 10):
-        WITHIN_TEN.append(0)
-
-    if (abs(percentDiff) <= 15):
-        withinFifteen.append(0)
-
-    if (abs(percentDiff) <= 5):
-        withinFive.append(0)
+    # print("Candidates: " + str(candidateList))
+    # actualRevenue = int(toPredict['actual_revenue'])
+    # predictedRevenue = predictRevenue(toPredict,candidateList)
+    # print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
+    # print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
+    #
+    # percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
 
     actualRating = float(toPredict['actual_imdb_rating'])
     predictedRating = predictRating(toPredict,candidateList)
     print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
 
     percentDiff = round((actualRating - predictedRating) / actualRating * 100, 2)
+
+    if (abs(percentDiff) <= 5):
+        withinFive.append(0)
+
+    if (abs(percentDiff) <= 10):
+        withinTen.append(0)
+
+    if (abs(percentDiff) <= 15):
+        withinFifteen.append(0)
+
+    if (abs(percentDiff) <= 20):
+        withinTwenty.append(0)
+
+    if (abs(percentDiff) <= 30):
+        withinThirty.append(0)
 
     print("Difference in rating prediction: " + str(percentDiff) + "%")
 
@@ -153,8 +162,8 @@ def predictRating(toPredict, candidateList):
     ratingMean = np.mean([x[0] for x in ratingRelevantCandidates])
     ratingSD = np.std([x[0] for x in ratingRelevantCandidates])
 
-    finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean + 2 * ratingSD)]
-    finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - 0.5 * ratingSD)]
+    finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean + 1.5 * ratingSD)]
+    finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - .75 * ratingSD)]
 
     finalRatingCandidatesWithWeight = []
 
