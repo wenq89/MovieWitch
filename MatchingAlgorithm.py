@@ -17,38 +17,38 @@ ACTOR_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 COMPANIES_DIST = {"1": 100, "2": 79.2, "3": 50, "4": 0}
 
 # Ratings Variables
-# #Weights used to match closeness of candidates
-# BUDGET_WEIGHT = 1
-# RUNTIME_WEIGHT = 1
-# DIRECTOR_WEIGHT = 5
-# GENRE_WEIGHT = 2
-# ACTOR_WEIGHT = 7
-# COMPANIES_WEIGHT = 1
-#
-# #Weights used to make the prediciton based off of the candidates
-# PREDICTION_ACTOR_WEIGHT = 3
-# PREDICTION_DIRECTOR_WEIGHT = 4
-# PREDICTION_MATCHPOINTS_WEIGHT = 5
-# PREDICTION_VOTECOUNT_WEIGHT = 3
-#
-# NUM_CANDIDATES = 13 # The number of candidates to keep track of
+#Weights used to match closeness of candidates
+BUDGET_WEIGHT = 1
+RUNTIME_WEIGHT = 1
+DIRECTOR_WEIGHT = 5
+GENRE_WEIGHT = 2
+ACTOR_WEIGHT = 7
+COMPANIES_WEIGHT = 1
+
+#Weights used to make the prediciton based off of the candidates
+PREDICTION_ACTOR_WEIGHT = 3
+PREDICTION_DIRECTOR_WEIGHT = 4
+PREDICTION_MATCHPOINTS_WEIGHT = 5
+PREDICTION_VOTECOUNT_WEIGHT = 3
+
+NUM_CANDIDATES = 13 # The number of candidates to keep track of
 
 # Revenue Variables
 #Weights used to match closeness of candidates
-BUDGET_WEIGHT = 5
-RUNTIME_WEIGHT = 1
-DIRECTOR_WEIGHT = 20
-GENRE_WEIGHT = 0
-ACTOR_WEIGHT = 10
-COMPANIES_WEIGHT = 30
-
-#Weights used to make the prediciton based off of the candidates
-PREDICTION_ACTOR_WEIGHT = 100
-PREDICTION_DIRECTOR_WEIGHT = 50
-PREDICTION_MATCHPOINTS_WEIGHT = 10
-PREDICTION_VOTECOUNT_WEIGHT = 1
-
-NUM_CANDIDATES = 4 # The number of candidates to keep track of
+# BUDGET_WEIGHT = 5
+# RUNTIME_WEIGHT = 1
+# DIRECTOR_WEIGHT = 20
+# GENRE_WEIGHT = 0
+# ACTOR_WEIGHT = 10
+# COMPANIES_WEIGHT = 30
+#
+# #Weights used to make the prediciton based off of the candidates
+# PREDICTION_ACTOR_WEIGHT = 100
+# PREDICTION_DIRECTOR_WEIGHT = 50
+# PREDICTION_MATCHPOINTS_WEIGHT = 10
+# PREDICTION_VOTECOUNT_WEIGHT = 1
+#
+# NUM_CANDIDATES = 4 # The number of candidates to keep track of
 
 withinFive = []
 withinTen = []
@@ -95,18 +95,18 @@ def runAlgorithm():
 def makePrediction(toPredict,candidateList):
     print("Predicting for: " + toPredict['title'])
     # print("Candidates: " + str(candidateList))
-    actualRevenue = int(toPredict['actual_revenue'])
-    predictedRevenue = predictRevenue(toPredict,candidateList)
-    print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
-    print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
-
-    percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
-
-    # actualRating = float(toPredict['actual_imdb_rating'])
-    # predictedRating = predictRating(toPredict,candidateList)
-    # print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
+    # actualRevenue = int(toPredict['actual_revenue'])
+    # predictedRevenue = predictRevenue(toPredict,candidateList)
+    # print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
+    # print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
     #
-    # percentDiff = round((actualRating - predictedRating) / actualRating * 100, 2)
+    # percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
+
+    actualRating = float(toPredict['actual_imdb_rating'])
+    predictedRating = predictRating(toPredict,candidateList)
+    print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
+
+    percentDiff = round((actualRating - predictedRating) / actualRating * 100, 2)
 
     if (abs(percentDiff) <= 5):
         withinFive.append(0)
