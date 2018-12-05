@@ -3,7 +3,7 @@ import numpy as np
 
 """
     Final Project COMP 4710 Fall 2018
-    Authors: Amanjyot Sainbhi, Kevin Tran, Lucas Eckhardt, Qi Wen
+    Authors: Amanjyot Singh Sainbhi, Kevin Tran, Lucas Eckhardt, Qi Wen
     Description: This program must be located in the same folder as the files tmdbWithPointsV2.csv and toPredict.csv
                 This implementation of our algorithm will predict the rating and revenue for all test movies in the 
                 toPredict.csv file and will be able to also predict for any movies added to that file in the same format.
@@ -21,25 +21,25 @@ DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "
 ACTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 10, "7": 5, "8": 0}
 
 #Weights used to match closeness of candidates, change based on if predicting rating or revenue as indicated
-BUDGET_WEIGHT = 1 #rating:1, revenue:5
+BUDGET_WEIGHT = 5 #rating:1, revenue:5
 RUNTIME_WEIGHT = 1 #rating:1, revenue:1
-DIRECTOR_WEIGHT = 5 #rating:5, revenue:20
-GENRE_WEIGHT = 2 #rating:2, revenue:0
-ACTOR_WEIGHT = 7 #rating:7, revenue:10
-COMPANIES_WEIGHT = 1 #rating:1, revenue:30
+DIRECTOR_WEIGHT = 20 #rating:5, revenue:20
+GENRE_WEIGHT = 0 #rating:2, revenue:0
+ACTOR_WEIGHT = 10 #rating:7, revenue:10
+COMPANIES_WEIGHT = 30 #rating:1, revenue:30
 
 #Weights used to make the prediciton based off of the candidates, change based on if predicting rating or revenue as indicated
-PREDICTION_ACTOR_WEIGHT = 3 #rating:3, revenue:100
-PREDICTION_DIRECTOR_WEIGHT = 4 #rating:4, revenue:50
-PREDICTION_MATCHPOINTS_WEIGHT = 5 #rating:5, revenue:10
-PREDICTION_VOTECOUNT_WEIGHT = 3 #rating:3, revenue:1
+PREDICTION_ACTOR_WEIGHT = 100 #rating:3, revenue:100
+PREDICTION_DIRECTOR_WEIGHT = 50 #rating:4, revenue:50
+PREDICTION_MATCHPOINTS_WEIGHT = 10 #rating:5, revenue:10
+PREDICTION_VOTECOUNT_WEIGHT = 1 #rating:3, revenue:1
 
 # The number of candidates to keep track of, changes based on if predicting rating or revenue as indicated
-NUM_CANDIDATES = 13 #rating:13, revenue:4
+NUM_CANDIDATES = 4 #rating:13, revenue:4
 
 # if true, gets rating predictions
 # if false, gets revenue predictions
-FOR_RATING = True
+PREDICT_RATING = False
 
 #Testing variables to report % difference between prediction and actual value
 withinFive = []
@@ -100,7 +100,7 @@ def makePrediction(toPredict,candidateList):
 
     print("Predicting for: " + toPredict['title'])
 
-    if FOR_RATING:
+    if PREDICT_RATING:
         actualRating = float(toPredict['actual_imdb_rating'])
         predictedRating = predictRating(toPredict, candidateList)
         print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
@@ -384,34 +384,38 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     toPredictCompanies = str(toPredictCompanies).split("|")
     toCompareCompanies = str(toCompareCompanies).split("|")
 
-    toCompareLikeCompanies = []
+    # toCompareLikeCompanies = []
 
-    for company in toCompareCompanies:
-        toCompareLikeCompanies = toCompareLikeCompanies + list(set(str(company).split(" ")) - set(toCompareLikeCompanies))
+    # for company in toCompareCompanies:
+    #     toCompareLikeCompanies = toCompareLikeCompanies + list(set(str(company).split(" ")) - set(toCompareLikeCompanies))
 
     commonCount = 0.0
 
-    for company in toPredictCompanies:
-        companyIndex = toPredictCompanies.index(company)
+    for predictCompany in toPredictCompanies:
+        predictCompanyIndex = toPredictCompanies.index(predictCompany)
 
-        if predictCompaniesCloseMatchBooleanList[companyIndex]:
-            companyWordsSplit = str(company).split(" ")
-            companyWordsSplitIndex = len(companyWordsSplit)
+        if predictCompaniesCloseMatchBooleanList[predictCompanyIndex]:
+            predictCompanyWordsSplit = str(predictCompany).split(" ")
 
-            for index in range(1,companyWordsSplitIndex):
-                likeCompany = " ".join(companyWordsSplit[:-index])
+            for compareCompany in toCompareCompanies:
+                numWordsMatched = 0
+                for predictcompanyword in predictCompanyWordsSplit:
+                    if predictcompanyword in compareCompany:
+                        numWordsMatched += 1
 
-                if  likeCompany in toCompareLikeCompanies:
-                    commonCount += (companyWordsSplitIndex-index) / float(companyWordsSplitIndex)
+                if numWordsMatched > 0:
+                    numCompareCompanyWords = len(str(compareCompany).split(" "))
+                    commonCount += (numWordsMatched / numCompareCompanyWords)
         else:
-            if company in toCompareCompanies:
+            if predictCompany in toCompareCompanies:
                 commonCount += 1
 
+    commonCount = round(commonCount)
     if commonCount >= 3:
         distance = COMPANIES_DIST.get("1")
-    elif commonCount == 2:
+    elif commonCount >= 2:
         distance = COMPANIES_DIST.get("2")
-    elif commonCount == 1:
+    elif commonCount >= 1:
         distance = COMPANIES_DIST.get("3")
     else:
         distance = COMPANIES_DIST.get("4")
@@ -425,7 +429,7 @@ def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
     toPredictCompanies = str(dfToPredict['production_companies']).split("|")
 
     for company in toPredictCompanies:
-        companyMatches = dataSetDf[dataSetDf['production_companies'].str.contains(company,na=False)]
+        companyMatches = dataSetDf[dataSetDf['production_companies'].str.contains(u'\|'+company+'\|',na=False)]
 
         if companyMatches.empty:
             predictCompaniesCloseMatchBooleanList.append(True)
