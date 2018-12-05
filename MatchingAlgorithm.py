@@ -374,7 +374,13 @@ def matchActors(toPredictActors, toCompareActors):
     return distance
 
 def matchCompanies(toPredictCompanies, toCompareCompanies):
-    """Leave for amanjyot"""
+    """Returns a matching score between 0-100 based on purely the similarity between production companies of the movies.
+    Calculated by taking the number of common production companies in the toPredict production companies set that are
+    also in the toCompare production companies set. Then looking up this in the if block to determine how many points
+    should be returned. That is when a production company appears somewhere in the database. If it does not appear then
+    a set of words are created from the toCompare production companies set. Then depending on amount of similar words
+    of the toPredict production company found in the words set, a fraction of commonCount is given which then gets
+    transformed to how many points should be returned"""
     toPredictCompanies = str(toPredictCompanies).split("|")
     toCompareCompanies = str(toCompareCompanies).split("|")
 
@@ -413,6 +419,8 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     return distance
 
 def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
+    """This resets the predictCompaniesCloseMatchBooleanList so that the position matching toPredict companies is true
+    if that company name is not found in the database and requires close Matching otherwise it gets set to false"""
     predictCompaniesCloseMatchBooleanList.clear()
     toPredictCompanies = str(dfToPredict['production_companies']).split("|")
 
