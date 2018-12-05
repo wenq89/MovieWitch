@@ -21,25 +21,25 @@ DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "
 ACTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 10, "7": 5, "8": 0}
 
 #Weights used to match closeness of candidates, change based on if predicting rating or revenue as indicated
-BUDGET_WEIGHT = 5 #rating:1, revenue:5
+BUDGET_WEIGHT = 1 #rating:1, revenue:5
 RUNTIME_WEIGHT = 1 #rating:1, revenue:1
-DIRECTOR_WEIGHT = 20 #rating:5, revenue:20
-GENRE_WEIGHT = 0 #rating:2, revenue:0
-ACTOR_WEIGHT = 10 #rating:7, revenue:10
-COMPANIES_WEIGHT = 30 #rating:1, revenue:30
+DIRECTOR_WEIGHT = 5 #rating:5, revenue:20
+GENRE_WEIGHT = 2 #rating:2, revenue:0
+ACTOR_WEIGHT = 7 #rating:7, revenue:10
+COMPANIES_WEIGHT = 1 #rating:1, revenue:30
 
 #Weights used to make the prediciton based off of the candidates, change based on if predicting rating or revenue as indicated
-PREDICTION_ACTOR_WEIGHT = 100 #rating:3, revenue:100
-PREDICTION_DIRECTOR_WEIGHT = 50 #rating:4, revenue:50
-PREDICTION_MATCHPOINTS_WEIGHT = 10 #rating:5, revenue:10
-PREDICTION_VOTECOUNT_WEIGHT = 1 #rating:3, revenue:1
+PREDICTION_ACTOR_WEIGHT = 3 #rating:3, revenue:100
+PREDICTION_DIRECTOR_WEIGHT = 4 #rating:4, revenue:50
+PREDICTION_MATCHPOINTS_WEIGHT = 5 #rating:5, revenue:10
+PREDICTION_VOTECOUNT_WEIGHT = 3 #rating:3, revenue:1
 
 # The number of candidates to keep track of, changes based on if predicting rating or revenue as indicated
-NUM_CANDIDATES = 4 #rating:13, revenue:4
+NUM_CANDIDATES = 13 #rating:13, revenue:4
 
 # if true, gets rating predictions
 # if false, gets revenue predictions
-PREDICT_RATING = False
+PREDICT_RATING = True
 
 #Testing variables to report % difference between prediction and actual value
 withinFive = []
@@ -103,14 +103,15 @@ def makePrediction(toPredict,candidateList):
     if PREDICT_RATING:
         actualRating = float(toPredict['actual_imdb_rating'])
         predictedRating = predictRating(toPredict, candidateList)
-        print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
         percentDiff = round((actualRating - predictedRating) / actualRating * 100, 2)
+        print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
+        print("Difference in rating prediction: " + str(percentDiff) + "%")
     else:
         actualRevenue = int(toPredict['actual_revenue'])
         predictedRevenue = predictRevenue(toPredict,candidateList)
-        print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
-        print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
         percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
+        print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
+        print("Difference in revenue prediction: " + str(percentDiff) + "%")
 
     #Tabulate how close the prediction was based on percent difference
     if (abs(percentDiff) <= 5):
@@ -382,7 +383,7 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
     of the toPredict production company found in the words set, a fraction of commonCount is given which then gets
     transformed to how many points should be returned"""
     toPredictCompanies = str(toPredictCompanies).split("|")
-    toCompareCompanies = str(toCompareCompanies).split("|")
+    toCompareCompanies = str(toCompareCompanies).strip("|").split("|")
 
     # toCompareLikeCompanies = []
 
@@ -399,18 +400,25 @@ def matchCompanies(toPredictCompanies, toCompareCompanies):
 
             for compareCompany in toCompareCompanies:
                 numWordsMatched = 0
+                matchedPrevWord = True
                 for predictcompanyword in predictCompanyWordsSplit:
-                    if predictcompanyword in compareCompany:
-                        numWordsMatched += 1
+                    if matchedPrevWord:
+                        if predictcompanyword in compareCompany:
+                            numWordsMatched += 1
+                        else:
+                            break
 
                 if numWordsMatched > 0:
                     numCompareCompanyWords = len(str(compareCompany).split(" "))
-                    commonCount += (numWordsMatched / numCompareCompanyWords)
+                    if (numWordsMatched / numCompareCompanyWords) > 0.5:
+                        commonCount += 1
+                    else:
+                        commonCount += 0.5
         else:
             if predictCompany in toCompareCompanies:
                 commonCount += 1
 
-    commonCount = round(commonCount)
+    # commonCount = round(commonCount)
     if commonCount >= 3:
         distance = COMPANIES_DIST.get("1")
     elif commonCount >= 2:
