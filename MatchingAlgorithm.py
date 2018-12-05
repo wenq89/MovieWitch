@@ -1,23 +1,26 @@
 import pandas as pd
 import numpy as np
 
-# Distribution of points for the runtime comparison
+"""
+    Final Project COMP 4710 Fall 2018
+    Authors: Amanjyot Sainbhi, Kevin Tran, Lucas Eckhardt, Qi Wen
+    Description: This program must be located in the same folder as the files tmdbWithPointsV2.csv and toPredict.csv
+                This implementation of our algorithm will predict the rating and revenue for all test movies in the 
+                toPredict.csv file and will be able to also predict for any movies added to that file in the same format.
+    Date: December 4 2018
+"""
+# Distribution of points for the intervals we are capturing during the matching stage of the algorithm
 RUNTIME_DIST = {"1": 100, "2": 92.1, "3": 82.7, "4": 71.2, "5": 56.5, "6": 35.6, "7": 0}
-
-# Distribution of points for the budget comparison
 BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
-
-DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
-
 DIRECTOR_DIST = {"1": 100, "2": 0}
-
-ACTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 10, "7": 5, "8": 0}
 ACTOR_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
-
 COMPANIES_DIST = {"1": 100, "2": 79.2, "3": 50, "4": 0}
 
-# Ratings Variables
-#Weights used to match closeness of candidates
+#Point distributions used in the prediction stage
+DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
+ACTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 10, "7": 5, "8": 0}
+
+#Weights used to match closeness of candidates, change based on if predicting rating or revenue as indicated
 BUDGET_WEIGHT = 1 #rating:1, revenue:5
 RUNTIME_WEIGHT = 1 #rating:1, revenue:1
 DIRECTOR_WEIGHT = 5 #rating:5, revenue:20
@@ -25,19 +28,20 @@ GENRE_WEIGHT = 2 #rating:2, revenue:0
 ACTOR_WEIGHT = 7 #rating:7, revenue:10
 COMPANIES_WEIGHT = 1 #rating:1, revenue:30
 
-#Weights used to make the prediciton based off of the candidates
+#Weights used to make the prediciton based off of the candidates, change based on if predicting rating or revenue as indicated
 PREDICTION_ACTOR_WEIGHT = 3 #rating:3, revenue:100
 PREDICTION_DIRECTOR_WEIGHT = 4 #rating:4, revenue:50
 PREDICTION_MATCHPOINTS_WEIGHT = 5 #rating:5, revenue:10
 PREDICTION_VOTECOUNT_WEIGHT = 3 #rating:3, revenue:1
 
-# The number of candidates to keep track of
+# The number of candidates to keep track of, changes based on if predicting rating or revenue as indicated
 NUM_CANDIDATES = 13 #rating:13, revenue:4
 
 # if true, gets rating predictions
 # if false, gets revenue predictions
 FOR_RATING = True
 
+#Testing variables to report % difference between prediction and actual value
 withinFive = []
 withinTen = []
 withinFifteen = []
@@ -48,24 +52,34 @@ withinThirty = []
 predictCompaniesCloseMatchBooleanList = []
 
 def runAlgorithm():
+    """Main method of the program, reads in the list of test cases and the dataset into pandas dataframes. Compares all
+        movies in the dataset to each candidate in the test cases and then calls makePrediction to predict for the current
+        test movie."""
 
+    #Reading in the dataset
     dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', dtype='object')
+
+    #Reading in the test cases
     dataFrame = pd.read_csv('toPredict.csv', dtype='object', error_bad_lines=False)
 
-    for dfToPredict in dataFrame.iterrows():
+    for dfToPredict in dataFrame.iterrows(): #Loop through each movie to predict for in the test cases
+
         print("*******************************************************************************************************")
         dfToPredict = dfToPredict[1]
         checkIfCompaniesCloseMatchesNeeded(dfToPredict, dataSetDF)
 
         topCandidates = []
 
+        #Initialize a candidate list to keep track of the best candidates
         for i in range(NUM_CANDIDATES):
             topCandidates.append((0, None))
 
         for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
 
+            #Calculate the current matching score between the test movie and the current dataset movie
             currentDist = calculateDistance(dfToPredict, row)
 
+            #If the matching score is higher than the lowest one in our candidate list swap them out and reorder the candidates
             if currentDist > topCandidates[NUM_CANDIDATES - 1][0]:
                 topCandidates[NUM_CANDIDATES - 1] = (currentDist, row)
                 topCandidates = sorted(topCandidates, key=lambda x: x[0], reverse=True)
@@ -73,6 +87,7 @@ def runAlgorithm():
         # Make the prediction based on the top candidates found
         makePrediction(dfToPredict,topCandidates)
 
+    #Print test results
     print()
     print("Within 5%: " + str(len(withinFive)))
     print("Within 10%: " + str(len(withinTen)))
@@ -81,8 +96,9 @@ def runAlgorithm():
     print("Within 30%: " + str(len(withinThirty)))
 
 def makePrediction(toPredict,candidateList):
+    """Makes calls to both predictRating and predictRevenue and prints out the predicitons along with the actual values"""
+
     print("Predicting for: " + toPredict['title'])
-    # print("Candidates: " + str(candidateList))
 
     if FOR_RATING:
         actualRating = float(toPredict['actual_imdb_rating'])
@@ -96,6 +112,7 @@ def makePrediction(toPredict,candidateList):
         print("Difference in revenue prediction: " + str(round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)) + "%")
         percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
 
+    #Tabulate how close the prediction was based on percent difference
     if (abs(percentDiff) <= 5):
         withinFive.append(0)
 
@@ -111,9 +128,9 @@ def makePrediction(toPredict,candidateList):
     if (abs(percentDiff) <= 30):
         withinThirty.append(0)
 
-    print("Difference in rating prediction: " + str(percentDiff) + "%")
-
 def predictRevenue(toPredict, candidateList):
+    """Makes the revenue prediction. Removes outliers. Reweights the candidates based on actor and director popularity
+    and the matching score from stage 1. Then takes a weighted average to predict the revenue and returns it"""
 
     revenueRelevantCandidates = []
 
@@ -134,7 +151,7 @@ def predictRevenue(toPredict, candidateList):
     finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - 0.25 * revenueSD)]
 
 
-    #Add the weights for each of the remaining candidates
+    #Calculate the weights for each of the remaining candidates
     finalRevenueCandidatesWithWeight = []
 
     for candidate in finalRevenues:
@@ -155,9 +172,12 @@ def predictRevenue(toPredict, candidateList):
     return revenuePrediction
 
 def predictRating(toPredict, candidateList):
+    """Makes the rating prediction. Removes outliers. Reweights the candidates based on actor and director popularity the
+    matching score from stage 1 and the number of votes received. Then takes a weighted average to predict the rating and returns it"""
 
     ratingRelevantCandidates = []
 
+    #Remove candidates with no rating specified
     for candidate in candidateList:
 
         currentCandidate = candidate[1]
@@ -165,6 +185,7 @@ def predictRating(toPredict, candidateList):
         if float(currentCandidate['vote_avg']) > 0:
             ratingRelevantCandidates.append((float(currentCandidate['vote_avg']), candidate))
 
+    #Remove outlier candidates based on rating
     ratingMean = np.mean([x[0] for x in ratingRelevantCandidates])
     ratingSD = np.std([x[0] for x in ratingRelevantCandidates])
 
@@ -173,6 +194,7 @@ def predictRating(toPredict, candidateList):
 
     finalRatingCandidatesWithWeight = []
 
+    #Weight each candidate based on vote count, direct and actor popularity and matching score from part 1
     for candidate in finalRatings:
         directorPoints = compareDirectorPoints(toPredict['director'], candidate[1][1]['director'])
         actorPoints = compareActorPoints(toPredict['cast'], candidate[1][1]['cast'])
@@ -185,6 +207,7 @@ def predictRating(toPredict, candidateList):
 
         finalRatingCandidatesWithWeight.append((candidateWeight, candidate[0]))
 
+    #Calculate the prediction
     sumRatingCandidateWeights = np.sum([float(x[0]) for x in finalRatingCandidatesWithWeight])
     sumRatingTimesCandidateWeight = np.sum([float(x[0]) * float(x[1]) for x in finalRatingCandidatesWithWeight])
 
@@ -193,9 +216,11 @@ def predictRating(toPredict, candidateList):
     return ratingPrediction
 
 def calculateDistance(toPredict, toCompare):
-
+    """Calculates the total matching score for the candidate. Score is based on runtime, budget, director, actors, companies
+    and genres. Sums up the matching score of each catergoy * the categories weight and returns the matching score."""
     totalDist = 0
 
+    #Calculate the matching score for each attribute
     runtimeDist = matchRuntime(toPredict['runtime'], toCompare['runtime'])
     budgetDist = matchBudget(toPredict['budget'], toCompare['budget_adj'])
     directorDist = matchDirector(toPredict['director'], toCompare['director'])
@@ -203,6 +228,7 @@ def calculateDistance(toPredict, toCompare):
     actorDist = matchActors(toPredict['cast'], toCompare['cast'])
     companyDist = matchCompanies(toPredict['production_companies'], toCompare['production_companies'])
 
+    #Sum up the individual atrribute matching scores time their weights
     totalDist += runtimeDist * RUNTIME_WEIGHT
     totalDist += budgetDist * BUDGET_WEIGHT
     totalDist += directorDist * DIRECTOR_WEIGHT
@@ -214,7 +240,11 @@ def calculateDistance(toPredict, toCompare):
 
 
 def evaluateVoteCount(toCompare):
+    """Evaluates how relevant the vote count should be in the rating prediction depending on how many votes the candidate
+    has received to determine its rating. Returns a point value between 0-100, 0 being no relevance."""
+
     weight = 0
+
     if int(toCompare['vote_count']) >= 5000:
         weight = 100
     elif 3000 <= int(toCompare['vote_count']) < 5000:
@@ -231,6 +261,10 @@ def evaluateVoteCount(toCompare):
 
 
 def matchGenres(toPredictGenresString, toCompareGenresString):
+    """Returns a matching score from 0-100 based on the proportion of genres in toPredicts genre list that are also in
+    toCompares genre set. 100 is returned if all genres in toPredicts set are also in toCompares set."""
+
+    #Get the sets of genres
     toPredictGenres = str(toPredictGenresString).split("|")
     toCompareGenres = str(toCompareGenresString).split("|")
 
@@ -238,15 +272,23 @@ def matchGenres(toPredictGenresString, toCompareGenresString):
 
     commonCount = 0
 
+    #Count how many are common to the two sets
     for genre in toPredictGenres:
         if genre in toCompareGenresSet:
             commonCount += 1
 
+    #Return 100 times the proportion in both
     return 100 * commonCount/len(toPredictGenres)
 
 
 def matchRuntime(toPredictRuntime, toCompareRuntime):
+    """Returns a matching score from 0-100 based on the similarity of the runtimes. The absolute value of the differnece in
+    minutes between the movies runtimes is calculated and then looked up to find the point interval that should be returned."""
+
+    #Calculate the difference in runtimes
     diff = abs(int(toPredictRuntime) - int(toCompareRuntime))
+
+    #Lookup the point interval that should be returned for the difference in runtime
 
     if diff <= 5:
         distance = RUNTIME_DIST.get("1")
@@ -267,8 +309,13 @@ def matchRuntime(toPredictRuntime, toCompareRuntime):
 
 
 def matchBudget(toPredictBudget, toCompareBudget):
+    """Returns a matching score form 0-100 based on the difference in budgets of the movies. The absolute value of the percent
+    difference in budgets is calculated and then the point interval is looked up and returned."""
+
+    #Calculate the % difference
     diff = abs(int(toPredictBudget) - int(toCompareBudget)) / int(toPredictBudget) * 100
 
+    #Lookup the interval to return the correct number of points
     if diff <= 5:
         distance = BUDGET_DIST.get("1")
     elif diff <= 10:
@@ -285,12 +332,17 @@ def matchBudget(toPredictBudget, toCompareBudget):
     return distance
 
 def matchActors(toPredictActors, toCompareActors):
+    """Returns a matching score between 0-100 based on purely the similarity between actors in the movies. Calculated by
+    taking the number of common actors in the toPredict actors set that are also in the toCompare actors set. Then looking
+    up this in the if block to determine how many points should be returned"""
+
     toPredictActors = str(toPredictActors).split("|")
     toCompareActors = str(toCompareActors).split("|")
 
     toPredictActorsList = []
     toCompareActorsList = []
 
+    #Remove point values after actors names so that they dont get in the way of name comparison
     for i in toPredictActors:
         toPredictActorsList.append(i.split(":")[0])
 
@@ -301,6 +353,7 @@ def matchActors(toPredictActors, toCompareActors):
 
     commonCount = 0
 
+    #Calculate the number of common actors
     for actor in toPredictActorsList:
         if actor in toCompareActorsSet:
             commonCount += 1
@@ -321,6 +374,7 @@ def matchActors(toPredictActors, toCompareActors):
     return distance
 
 def matchCompanies(toPredictCompanies, toCompareCompanies):
+    """Leave for amanjyot"""
     toPredictCompanies = str(toPredictCompanies).split("|")
     toCompareCompanies = str(toCompareCompanies).split("|")
 
@@ -372,7 +426,7 @@ def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
 
 
 def matchDirector(toPredictDirector, toCompareDirector):
-
+    """Returns a matching score either a 0 or 100. 100 if the movies have the same director and 0 if they do not"""
     if str(toPredictDirector) in str(toCompareDirector):
         distance = DIRECTOR_DIST.get("1")
     else:
@@ -382,9 +436,14 @@ def matchDirector(toPredictDirector, toCompareDirector):
 
 
 def compareDirectorPoints(toPredictDirector, toCompareDirector):
+    """Returns a value 0-100 to be used in the prediction phase of the algorithm. The value is determined based on the
+    popularity of the director if it's similar between the 2 movies. Higher point value means a more popular director. If
+    the director is a top 10 director in our ranking list then 100 points will be returned all the way down to 0 points if the
+    directors don't match even."""
+
     points = -1
 
-    #if match,but without points = 0; no match points = -1,
+    #Find if the directors match and if so how popular the matching director is
     if str(toPredictDirector) in str(toCompareDirector):
         for multiDirectors in str(toCompareDirector).split("|"):
              if str(toPredictDirector) in multiDirectors:
@@ -395,6 +454,8 @@ def compareDirectorPoints(toPredictDirector, toCompareDirector):
                  else:
                      points = 0
 
+    #Get a point value to return based on the popularity score of the director.
+    #Any director between 50000-20000 points was in the top 10 of the directors ranking list we used
     if points > 50000:
         distance = DIRECTOR_POINTS_DIST.get("1")
     elif 20000 < points <= 50000:
@@ -409,17 +470,21 @@ def compareDirectorPoints(toPredictDirector, toCompareDirector):
         distance = DIRECTOR_POINTS_DIST.get("6")
     elif 0 < points <= 1000:
         distance = DIRECTOR_POINTS_DIST.get("7")
-    elif points == 0:
+    elif points == 0: #Return a base amount of points if the director matches but we have no ranking for them in our list
         distance = DIRECTOR_POINTS_DIST.get("8")
-    else:
+    else: #Return no points if the director doesnt matching between toPredict and this candidate
         distance = DIRECTOR_POINTS_DIST.get("9")
 
     return distance
 
 def compareActorPoints(toPredictActors, toCompareActors):
+    """Returns a point value to be used in the prediction phase of the algorithm. The value is determined based on the
+        popularity of the actors that are similar between the movies. Higher point value means a more popular actor. There could
+        be multilple similar actors with point rankings which will be taken into consideration."""
 
     pointsList = []
 
+    #Find similar actors between toPredict and the candidate toCompare
     for thePredictActor in str(toPredictActors).split("|"):
         for theCompareActor in str(toCompareActors).split("|"):
             if thePredictActor in theCompareActor:
@@ -433,9 +498,11 @@ def compareActorPoints(toPredictActors, toCompareActors):
 
     distance = 0
 
+    #If there are no matching actors between toPredict and this candidate return 0 points
     if len(pointsList) == 0:
         distance = ACTOR_POINTS_DIST.get("8") #do not match
 
+    #Sum up the point values based on how popular the matching actors are
     for finalPoints in pointsList:
         if finalPoints > 90000:
             distance += ACTOR_POINTS_DIST.get("1")
@@ -455,17 +522,3 @@ def compareActorPoints(toPredictActors, toCompareActors):
     return distance
 
 runAlgorithm()
-
-# Test compareGenres()
-# toPredict = "Science Fiction|Fantasy|Action|Adventure|Drama|Horror"
-# toCompare = "Action|Adventure|Fantasy|Science Fiction"
-# result = compareGenres(toPredict, toCompare)
-# print("**** " + str(result))
-
-# Predicted Revenue: 205328146.68656018
-# 2598
-# Predicted Rating: 6.181582164882405
-
-# Predicted Revenue: 246630469.70744947
-# 2598
-# Predicted Rating: 6.181582164882405
