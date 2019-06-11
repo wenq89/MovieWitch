@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import timeit
 
 """
     Final Project COMP 4710 Fall 2018
@@ -35,7 +36,7 @@ PREDICTION_MATCHPOINTS_WEIGHT = 5 #rating:5, revenue:10
 PREDICTION_VOTECOUNT_WEIGHT = 3 #rating:3, revenue:1
 
 # The number of candidates to keep track of, changes based on if predicting rating or revenue as indicated
-NUM_CANDIDATES = 13 #rating:13, revenue:4
+NUM_CANDIDATES = 500 #rating:13, revenue:4
 
 # if true, gets rating predictions
 # if false, gets revenue predictions
@@ -56,12 +57,73 @@ def runAlgorithm():
         movies in the data set to each candidate in the test cases and then calls makePrediction to predict for the current
         test movie."""
 
+    start = timeit.default_timer()
     #Reading in the data set
-    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', dtype='object')
+    #clean the data set, only read columns that will be used.
+    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', usecols=['budget', 'revenue', 'original_title', 'cast',
+                                     'director', 'runtime','production_companies', 'vote_count','vote_avg'])
+    #print(dataSetDF.head(10))
+
+    stop = timeit.default_timer()
+    print('Time second: ', stop - start)  # 0.1458147 seconds before for per movie
+
 
     #Reading in the test cases
     dataFrame = pd.read_csv('toPredict.csv', dtype='object', error_bad_lines=False)
 
+    for dfToPredict in dataFrame.iterrows():  # Loop through each movie to predict for in the test cases
+
+        dfToPredict = dfToPredict[1]
+        #checkIfCompaniesCloseMatchesNeeded(dfToPredict, dataSetDF)
+
+        topCandidates = []
+
+        # Initialize a candidate list to keep track of the best candidates
+        for i in range(NUM_CANDIDATES):
+            topCandidates.append((0, None))
+
+        count = 0
+
+        for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
+            if newMatchActors(dfToPredict['cast'], row['cast']):
+                topCandidates[count] = row
+                count = count + 1
+            if newMatchDirector(dfToPredict['director'], row['director']):
+                topCandidates[count] = row
+                count = count + 1
+            # if newMatchCompanies(dfToPredict['production_companies'], row['production_companies']):
+            #     topCandidates[count] = row
+            #     count = count + 1
+
+        print(topCandidates)
+        print('count: ', count)
+        stop = timeit.default_timer()
+        print('Time second: ', stop - start) #19seconds before for per movie
+        break
+
+
+         # for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
+         #     # Calculate the current matching score between the test movie and the current dataset movie
+         #     currentDist = calculateDistance(dfToPredict, row)
+
+    # If the matching score is higher than the lowest one in our candidate list swap them out and reorder the candidates
+    #         if currentDist > topCandidates[NUM_CANDIDATES - 1][0]:
+    #             topCandidates[NUM_CANDIDATES - 1] = (currentDist, row)
+    #             topCandidates = sorted(topCandidates, key=lambda x: x[0], reverse=True)
+    #
+    #     # Make the prediction based on the top candidates found
+    #     makePrediction(dfToPredict, topCandidates)
+    #
+    #     # Print test results
+    # print()
+    # print("Within 5%: " + str(len(withinFive)))
+    # print("Within 10%: " + str(len(withinTen)))
+    # print("Within 15%: " + str(len(withinFifteen)))
+    # print("Within 20%: " + str(len(withinTwenty)))
+    # print("Within 30%: " + str(len(withinThirty)))
+
+
+"""
     for dfToPredict in dataFrame.iterrows(): #Loop through each movie to predict for in the test cases
 
         print("*******************************************************************************************************")
@@ -93,7 +155,7 @@ def runAlgorithm():
     print("Within 15%: " + str(len(withinFifteen)))
     print("Within 20%: " + str(len(withinTwenty)))
     print("Within 30%: " + str(len(withinThirty)))
-
+"""
 def makePrediction(toPredict,candidateList):
     """Makes calls to both predictRating and predictRevenue and prints out the predicitons along with the actual values"""
 
@@ -331,6 +393,29 @@ def matchBudget(toPredictBudget, toCompareBudget):
 
     return distance
 
+def newMatchActors(toPredictActors, toCompareActors):
+    toPredictActors = str(toPredictActors).split("|")
+    toCompareActors = str(toCompareActors).split("|")
+
+    toPredictActorsList = []
+    toCompareActorsList = []
+
+    #Remove point values after actors names so that they do not get in the way of name comparison
+    for i in toPredictActors:
+        toPredictActorsList.append(i.split(":")[0])
+
+    for j in toCompareActors:
+        toCompareActorsList.append(j.split(":")[0])
+
+    toCompareActorsSet = set(toCompareActorsList)
+
+    for actor in toPredictActorsList:
+        if actor in toCompareActorsSet:
+            return True
+
+    return False
+
+
 def matchActors(toPredictActors, toCompareActors):
     """Returns a matching score between 0-100 based on purely the similarity between actors in the movies. Calculated by
     taking the number of common actors in the toPredict actors set that are also in the toCompare actors set. Then looking
@@ -342,7 +427,7 @@ def matchActors(toPredictActors, toCompareActors):
     toPredictActorsList = []
     toCompareActorsList = []
 
-    #Remove point values after actors names so that they dont get in the way of name comparison
+    #Remove point values after actors names so that they do not get in the way of name comparison
     for i in toPredictActors:
         toPredictActorsList.append(i.split(":")[0])
 
@@ -372,6 +457,19 @@ def matchActors(toPredictActors, toCompareActors):
         distance = ACTOR_DIST.get("6")
 
     return distance
+
+def newMatchCompanies(toPredictCompanies, toCompareCompanies):
+    toPredictc = str(toPredictCompanies).split("|")
+    toComparec = str(toCompareCompanies).split("|")
+
+    toComparecccc = set(toComparec)
+
+    for cscs in toPredictc:
+        if cscs in toComparecccc:
+            return True
+
+    return False
+
 
 def matchCompanies(toPredictCompanies, toCompareCompanies):
     """Returns a matching score between 0-100 based on purely the similarity between production companies of the movies.
@@ -443,6 +541,12 @@ def checkIfCompaniesCloseMatchesNeeded(dfToPredict,dataSetDf):
         else:
             predictCompaniesCloseMatchBooleanList.append(False)
 
+
+def newMatchDirector(toPredictDirector, toCompareDirector):
+    """Returns a matching score either a 0 or 100. 100 if the movies have the same director and 0 if they do not"""
+    if str(toPredictDirector) in str(toCompareDirector):
+        return True
+    return False
 
 def matchDirector(toPredictDirector, toCompareDirector):
     """Returns a matching score either a 0 or 100. 100 if the movies have the same director and 0 if they do not"""
