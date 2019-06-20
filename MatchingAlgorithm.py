@@ -30,9 +30,9 @@ ACTOR_WEIGHT = 0.15 #rating:7, revenue:10
 COMPANIES_WEIGHT = 0.4 #rating:1, revenue:30
 
 #Weights used to make the prediction based off of the candidates, change based on if predicting rating or revenue as indicated
-PREDICTION_ACTOR_WEIGHT = 3 #rating:3, revenue:100
-PREDICTION_DIRECTOR_WEIGHT = 4 #rating:4, revenue:50
-PREDICTION_MATCHPOINTS_WEIGHT = 5 #rating:5, revenue:10
+PREDICTION_ACTOR_WEIGHT = 0.4 #rating:3, revenue:100
+PREDICTION_DIRECTOR_WEIGHT = 0.2 #rating:4, revenue:50
+PREDICTION_MATCHPOINTS_WEIGHT = 0.4 #rating:5, revenue:10
 #PREDICTION_VOTECOUNT_WEIGHT = 0.2 #rating:3, revenue:1
 
 # The number of candidates to keep track of, changes based on if predicting rating or revenue as indicated
@@ -58,9 +58,9 @@ def runAlgorithm():
         test movie."""
 
     #Reading in the data set
-    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', usecols=['original_title', 'budget_adj', 'revenue_adj', 'cast',
+    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', usecols=['budget_adj', 'revenue_adj', 'cast',
                                                              'director', 'runtime', 'genres',
-                                                             'production_companies', 'vote_count', 'vote_avg'])
+                                                             'production_companies', 'vote_avg']) #, 'vote_count'
 
     #Reading in the test cases
     dataFrame = pd.read_csv('toPredict.csv', dtype='object', error_bad_lines=False)
@@ -82,15 +82,9 @@ def runAlgorithm():
         newDataList = []
         count = 0
 
-
-
         #print(type(dataFrame))
         for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
 
-            # if matchActors(dfToPredict['cast'], row['cast']) \
-            #                 or matchDirector(dfToPredict['director'], row['director']):
-            #     newDataList.append(row)
-            #     count = count + 1
             if matchCompanies(dfToPredict['production_companies'], row['production_companies']) != 0 \
                              or matchActors(dfToPredict['cast'], row['cast']) \
                              or matchDirector(dfToPredict['director'], row['director']):
@@ -99,8 +93,6 @@ def runAlgorithm():
 
         newDataFrame = pd.DataFrame(newDataList)
         print("count = ", count)
-
-        #print(newDataFrame)
 
         for index, row in newDataFrame.iterrows():  # Iterate all rows in our data set
             #Calculate the current matching score between the test movie and the current data set movie
@@ -111,10 +103,9 @@ def runAlgorithm():
                 topCandidates[NUM_CANDIDATES - 1] = (currentDist, row)
                 topCandidates = sorted(topCandidates, key=lambda x: x[0], reverse=True)
 
-        #in case of less than 13 topCandidates
+        #in case of less than 40 topCandidates
         realTopCandidates = [i for i in topCandidates if i[0]!=0]
 
-        #print("realTopCandidates:",realTopCandidates)
         # Make the prediction based on the top candidates found
         makePrediction(dfToPredict,realTopCandidates)
 
@@ -216,7 +207,7 @@ def predictRating(toPredict, candidateList):
         if float(currentCandidate['vote_avg']) > 0:
             ratingRelevantCandidates.append((float(currentCandidate['vote_avg']), candidate))
 
-        print("ratings::::::::",currentCandidate['vote_avg'])
+        #print("ratings::::::::",currentCandidate['vote_avg'])
 
     #Remove outlier candidates based on rating
     ratingMean = np.mean([x[0] for x in ratingRelevantCandidates])
@@ -226,8 +217,6 @@ def predictRating(toPredict, candidateList):
 
     finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean + 1.5 * ratingSD)]
     finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - .75 * ratingSD)]
-
-    #print("finalRatings", finalRatings)
 
     finalRatingCandidatesWithWeight = []
 
