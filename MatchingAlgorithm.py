@@ -11,11 +11,16 @@ import timeit
     Date: December 4 2018
 """
 # Distribution of points for the intervals we are capturing during the matching stage of the algorithm
-RUNTIME_DIST = {"1": 100, "2": 92.1, "3": 82.7, "4": 71.2, "5": 56.5, "6": 35.6, "7": 0}
-BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
+
+RUNTIME_DIST = {"1": 100, "2": 75, "3": 50, "4": 0}
+#RUNTIME_DIST = {"1": 100, "2": 92.1, "3": 82.7, "4": 71.2, "5": 56.5, "6": 35.6, "7": 0}
+BUDGET_DIST = {"1": 100, "2": 75, "3": 50, "4": 0}
+#BUDGET_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
 DIRECTOR_DIST = {"1": 100, "2": 0}
-ACTOR_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
-COMPANIES_DIST = {"1": 100, "2": 79.2, "3": 50, "4": 0}
+ACTOR_DIST = {"1": 100, "2": 75, "3": 50, "4": 0}
+#ACTOR_DIST = {"1": 100, "2": 89.8, "3": 77.4, "4": 61.3, "5": 38.7, "6": 0}
+COMPANIES_DIST = {"1": 100, "2": 75, "3": 50, "4": 0}
+#COMPANIES_DIST = {"1": 100, "2": 79.2, "3": 50, "4": 0}
 
 #Point distributions used in the prediction stage
 DIRECTOR_POINTS_DIST = {"1": 100, "2": 85, "3": 70, "4": 50, "5": 30, "6": 15, "7": 10, "8": 5, "9": 0}
@@ -30,13 +35,13 @@ ACTOR_WEIGHT = 0.15 #rating:7, revenue:10
 COMPANIES_WEIGHT = 0.4 #rating:1, revenue:30
 
 #Weights used to make the prediction based off of the candidates, change based on if predicting rating or revenue as indicated
-PREDICTION_ACTOR_WEIGHT = 0.4 #rating:3, revenue:100
+PREDICTION_ACTOR_WEIGHT = 0.3 #rating:3, revenue:100
 PREDICTION_DIRECTOR_WEIGHT = 0.2 #rating:4, revenue:50
-PREDICTION_MATCHPOINTS_WEIGHT = 0.4 #rating:5, revenue:10
-#PREDICTION_VOTECOUNT_WEIGHT = 0.2 #rating:3, revenue:1
+PREDICTION_MATCHPOINTS_WEIGHT = 0.3 #rating:5, revenue:10
+PREDICTION_VOTECOUNT_WEIGHT = 0.2 #rating:3, revenue:1
 
 # The number of candidates to keep track of, changes based on if predicting rating or revenue as indicated
-NUM_CANDIDATES = 40 #rating:13, revenue:4
+NUM_CANDIDATES = 30 #rating:13, revenue:4
 
 # if true, gets rating predictions
 # if false, gets revenue predictions
@@ -58,12 +63,12 @@ def runAlgorithm():
         test movie."""
 
     #Reading in the data set
-    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', usecols=['budget_adj', 'revenue_adj', 'cast',
+    dataSetDF = pd.read_csv('tmbdWithPointsV2.csv', usecols=['original_title', 'vote_count' ,'budget_adj', 'revenue_adj', 'cast',
                                                              'director', 'runtime', 'genres',
-                                                             'production_companies', 'vote_avg']) #, 'vote_count'
+                                                             'production_companies', 'vote_avg']) #'original_title'
 
     #Reading in the test cases
-    dataFrame = pd.read_csv('toPredict.csv', dtype='object', error_bad_lines=False)
+    dataFrame = pd.read_csv('toPredict - copy.csv', dtype='object', error_bad_lines=False)
 
     for dfToPredict in dataFrame.iterrows(): #Loop through each movie to predict for in the test cases
 
@@ -80,7 +85,7 @@ def runAlgorithm():
 
         #print(dataSetDF)
         newDataList = []
-        count = 0
+        potentialCandidatesCount = 0
 
         #print(type(dataFrame))
         for index, row in dataSetDF.iterrows():  # Iterate all rows in our data-set
@@ -89,10 +94,15 @@ def runAlgorithm():
                              or matchActors(dfToPredict['cast'], row['cast']) \
                              or matchDirector(dfToPredict['director'], row['director']):
                 newDataList.append(row)
-                count = count + 1
+                potentialCandidatesCount = potentialCandidatesCount + 1
 
         newDataFrame = pd.DataFrame(newDataList)
-        print("count = ", count)
+        print("potentialCandidatesCount = ", potentialCandidatesCount)
+
+        if potentialCandidatesCount == 0:
+            print("Sorry, can not predict movie - " + dfToPredict['title'])
+            print("There is no relevant record to predict.")
+            continue
 
         for index, row in newDataFrame.iterrows():  # Iterate all rows in our data set
             #Calculate the current matching score between the test movie and the current data set movie
@@ -103,8 +113,10 @@ def runAlgorithm():
                 topCandidates[NUM_CANDIDATES - 1] = (currentDist, row)
                 topCandidates = sorted(topCandidates, key=lambda x: x[0], reverse=True)
 
-        #in case of less than 40 topCandidates
+        #in case of less than 30 topCandidates
         realTopCandidates = [i for i in topCandidates if i[0]!=0]
+
+        #print(realTopCandidates)
 
         # Make the prediction based on the top candidates found
         makePrediction(dfToPredict,realTopCandidates)
@@ -124,7 +136,7 @@ def makePrediction(toPredict,candidateList):
 
     if PREDICT_RATING:
         actualRating = float(toPredict['actual_imdb_rating'])
-        predictedRating = predictRating(toPredict, candidateList)
+        predictedRating = round(predictRating(toPredict, candidateList),1)
         percentDiff = round((actualRating - predictedRating) / actualRating * 100, 2)
         print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
         print("Difference in rating prediction: " + str(percentDiff) + "%")
@@ -215,8 +227,8 @@ def predictRating(toPredict, candidateList):
     ratingSD = np.std([x[0] for x in ratingRelevantCandidates])
     print("ratingSD", ratingSD)
 
-    finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean + 1.5 * ratingSD)]
-    finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean - .75 * ratingSD)]
+    finalRatings = [x for x in ratingRelevantCandidates if (float(x[0]) < ratingMean +  ratingSD)]#1.5 *
+    finalRatings = [x for x in finalRatings if (float(x[0]) > ratingMean -  ratingSD)]#.75 *
 
     finalRatingCandidatesWithWeight = []
 
@@ -224,10 +236,12 @@ def predictRating(toPredict, candidateList):
     for candidate in finalRatings:
         directorPoints = compareDirectorPoints(toPredict['director'], candidate[1][1]['director'])
         actorPoints = compareActorPoints(toPredict['cast'], candidate[1][1]['cast'])
+        voteCountPoints = int(candidate[1][1]['vote_count'])
         matchPoints = candidate[1][0] / np.max([float(x[1][0]) for x in finalRatings]) * 100
         candidateWeight = PREDICTION_MATCHPOINTS_WEIGHT * matchPoints \
                           + PREDICTION_ACTOR_WEIGHT * actorPoints \
                           + PREDICTION_DIRECTOR_WEIGHT * directorPoints \
+                          + PREDICTION_VOTECOUNT_WEIGHT * voteCountPoints
 
         finalRatingCandidatesWithWeight.append((candidateWeight, candidate[0]))
 
@@ -262,6 +276,28 @@ def calculateDistance(toPredict, toCompare):
 
     return totalDist
 
+
+def evaluateVoteCount(toCompare):
+    """Evaluates how relevant the vote count should be in the rating prediction depending on how many votes the candidate
+    has received to determine its rating. Returns a point value between 0-100, 0 being no relevance."""
+
+    #weight = 0
+
+    if int(toCompare['vote_count']) >= 5000:
+        weight = 100
+    elif 3000 <= int(toCompare['vote_count']) < 5000:
+        weight = 80
+    elif 2000 <= int(toCompare['vote_count']) < 3000:
+        weight = 60
+    elif 1000 <= int(toCompare['vote_count']) < 2000:
+        weight = 40
+    elif 500 <= int(toCompare['vote_count']) < 1000:
+        weight = 20
+    else:
+        weight = 0
+    return weight
+
+
 def matchGenres(toPredictGenresString, toCompareGenresString):
     """Returns a matching score from 0-100 based on the proportion of genres in toPredicts genre list that are also in
     toCompares genre set. 100 is returned if all genres in toPredicts set are also in toCompares set."""
@@ -291,20 +327,14 @@ def matchRuntime(toPredictRuntime, toCompareRuntime):
 
     #Lookup the point interval that should be returned for the difference in runtime
 
-    if diff <= 5:
+    if diff <= 10:
         distance = RUNTIME_DIST.get("1")
-    elif diff <= 10:
-        distance = RUNTIME_DIST.get("2")
     elif diff <= 15:
-        distance = RUNTIME_DIST.get("3")
+        distance = RUNTIME_DIST.get("2")
     elif diff <= 20:
-        distance = RUNTIME_DIST.get("4")
-    elif diff <= 25:
-        distance = RUNTIME_DIST.get("5")
-    elif diff <= 30:
-        distance = RUNTIME_DIST.get("6")
+        distance = RUNTIME_DIST.get("3")
     else:
-        distance = RUNTIME_DIST.get("7")
+        distance = RUNTIME_DIST.get("4")
 
     return distance
 
@@ -316,18 +346,14 @@ def matchBudget(toPredictBudget, toCompareBudget):
     diff = abs(int(toPredictBudget) - int(toCompareBudget)) / int(toPredictBudget) * 100
 
     #Lookup the interval to return the correct number of points
-    if diff <= 5:
+    if diff <= 10:
         distance = BUDGET_DIST.get("1")
-    elif diff <= 10:
-        distance = BUDGET_DIST.get("2")
     elif diff <= 15:
-        distance = BUDGET_DIST.get("3")
+        distance = BUDGET_DIST.get("2")
     elif diff <= 20:
-        distance = BUDGET_DIST.get("4")
-    elif diff <= 25:
-        distance = BUDGET_DIST.get("5")
+        distance = BUDGET_DIST.get("3")
     else:
-        distance = BUDGET_DIST.get("6")
+        distance = BUDGET_DIST.get("4")
 
     return distance
 
@@ -358,18 +384,14 @@ def matchActors(toPredictActors, toCompareActors):
         if actor in toCompareActorsSet:
             commonCount += 1
 
-    if commonCount >= 5:
+    if commonCount >= 3:
         distance = ACTOR_DIST.get("1")
-    elif commonCount == 4:
-        distance = ACTOR_DIST.get("2")
-    elif commonCount == 3:
-        distance = ACTOR_DIST.get("3")
     elif commonCount == 2:
-        distance = ACTOR_DIST.get("4")
+        distance = ACTOR_DIST.get("2")
     elif commonCount == 1:
-        distance = ACTOR_DIST.get("5")
+        distance = ACTOR_DIST.get("3")
     else:
-        distance = ACTOR_DIST.get("6")
+        distance = ACTOR_DIST.get("4")
 
     return distance
 
