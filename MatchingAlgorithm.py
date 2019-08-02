@@ -45,7 +45,7 @@ NUM_CANDIDATES = 30 #rating:13, revenue:4
 
 # if true, gets rating predictions
 # if false, gets revenue predictions
-PREDICT_RATING = True
+PREDICT_RATING = False #True
 
 #Testing variables to report % difference between prediction and actual value
 withinFive = []
@@ -68,7 +68,7 @@ def runAlgorithm():
                                                              'production_companies', 'vote_avg']) #'original_title'
 
     #Reading in the test cases
-    dataFrame = pd.read_csv('toPredict - copy.csv', dtype='object', error_bad_lines=False)
+    dataFrame = pd.read_csv('toPredict_actionMovies.csv', dtype='object', error_bad_lines=False) #toPredict_actionMovies
 
     for dfToPredict in dataFrame.iterrows(): #Loop through each movie to predict for in the test cases
 
@@ -141,8 +141,9 @@ def makePrediction(toPredict,candidateList):
         print("Predicted rating: " + str(predictedRating) + " Actual Rating: " + str(actualRating))
         print("Difference in rating prediction: " + str(percentDiff) + "%")
     else:
+        predictedRating = round(predictRating(toPredict, candidateList), 1) # using rating to prune unrelated movies.
         actualRevenue = int(toPredict['actual_revenue'])
-        predictedRevenue = predictRevenue(toPredict,candidateList)
+        predictedRevenue = int(predictRevenue(toPredict,candidateList,predictedRating) * float(toPredict['budget'])) #PredictRevenue method return mean RoR
         percentDiff = round((actualRevenue - predictedRevenue) / actualRevenue * 100, 2)
         print(str("Predicted revenue: " + str(predictedRevenue) + " Actual Revenue: " + str(actualRevenue)))
         print("Difference in revenue prediction: " + str(percentDiff) + "%")
@@ -163,7 +164,7 @@ def makePrediction(toPredict,candidateList):
     if abs(percentDiff) <= 30:
         withinThirty.append(0)
 
-def predictRevenue(toPredict, candidateList):
+def predictRevenue(toPredict, candidateList,predictedRating):
     """Makes the revenue prediction. Removes outliers. Reweighs the candidates based on actor and director popularity
     and the matching score from stage 1. Then takes a weighted average to predict the revenue and returns it"""
 
@@ -174,16 +175,28 @@ def predictRevenue(toPredict, candidateList):
 
         currentCandidate = candidate[1]
 
-        if int(currentCandidate['revenue_adj']) > 0:
-            revenueRelevantCandidates.append((float(currentCandidate['revenue_adj']), candidate))
+        #candidates rating should be in between predictedRating + 0.8 and predictedRating - 0.8
+        if predictedRating - 0.8 <= currentCandidate['vote_avg'] <= predictedRating + 0.8:
+            if int(currentCandidate['revenue_adj']) > 0 and int(currentCandidate['budget_adj']) > 0:
+                revenueRelevantCandidates.append((float(currentCandidate['revenue_adj'])/float(currentCandidate['budget_adj']), candidate))
+            else:
+                revenueRelevantCandidates.append((0, candidate))
 
     #Calculate the mean and standard deviation of the candidates revenue
     revenueMean = np.mean([x[0] for x in revenueRelevantCandidates])
     revenueSD = np.std([x[0] for x in revenueRelevantCandidates])
 
+    #print(revenueMean)
+    #print(revenueSD)
+
+
     #Remove outliers from the candidates
-    finalRevenues = [x for x in revenueRelevantCandidates if (float(x[0]) < revenueMean + 3 * revenueSD)]
-    finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - 0.25 * revenueSD)]
+    finalRevenues = [x for x in revenueRelevantCandidates if (x[0] != 0)]
+    finalRevenues = [x for x in finalRevenues if (float(x[0]) < revenueMean + revenueSD)]
+    finalRevenues = [x for x in finalRevenues if (float(x[0]) > revenueMean - revenueSD)]
+
+    #TEST: SHOW ALL CANDIDATES WITH ROR
+    #print(finalRevenues)
 
 
     #Calculate the weights for each of the remaining candidates
